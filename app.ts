@@ -1,6 +1,11 @@
+// package imports
 import { config as dotenvConfig } from "dotenv";
 import express from "express";
+import helmet from "helmet";
 import mongoose from "mongoose";
+
+// route imports
+import usersRoutes from "@routes/users";
 
 // setup environemnt variables
 dotenvConfig();
@@ -29,15 +34,11 @@ connectMongoDB();
 
 // middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(helmet());
 
 // routes
-app.get("/", (req, res) => {
-  res.json("Hello Parentingo!");
-});
-
-app.post("/users", (req, res) => {
-  console.log(req.body);
-});
+app.use("/users", usersRoutes);
 
 // start em up!
 app.listen(PORT ? PORT : 3000, () => {

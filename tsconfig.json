@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "target": "es2016",
-    "module": "commonjs",
+    "target": "es2020",
+    "module": "nodenext",
     "outDir": "./dist",
     "removeComments": true,
     "esModuleInterop": true,
@@ -10,8 +10,13 @@
     "skipLibCheck": true,
     "baseUrl": "./",
     "paths": {
+      "@controllers/*": ["controllers/*"],
+      "@interfaces/*": ["interfaces/*"],
       "@models/*": ["models/*"],
-      "@interfaces/*": ["interfaces/*"]
+      "@routes/*": ["routes/*"]
     },
+  },
+  "ts-node": {
+    "require": ["tsconfig-paths/register"]
   }
 }
