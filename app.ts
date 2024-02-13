@@ -12,15 +12,13 @@ dotenvConfig();
 const PORT = process.env.PORT ? +process.env.PORT : undefined;
 const MONGO = process.env.MONGO ? process.env.MONGO : undefined;
 
-const app = express();
-
-// set up mongoose & connect to database
+// setup mongoose & connect to database
 mongoose.set("strictQuery", true);
 async function connectMongoDB() {
   try {
     if (MONGO) {
       await mongoose.connect(MONGO);
-      console.log("Connected to MongoDB server");
+      console.log("Connected to MongoDB");
     } else {
       throw new Error(
         "No mongoDB connection string - check environment variables",
@@ -32,6 +30,8 @@ async function connectMongoDB() {
 }
 connectMongoDB();
 
+const app = express();
+
 // middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -42,5 +42,5 @@ app.use("/users", usersRoutes);
 
 // start em up!
 app.listen(PORT ? PORT : 3000, () => {
-  console.log(`App listening on port ${PORT}`);
+  console.log(`Server listening on port ${PORT}`);
 });
