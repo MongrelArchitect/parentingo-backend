@@ -1,6 +1,6 @@
 // package imports
 import { config as dotenvConfig } from "dotenv";
-import express from "express";
+import express, { NextFunction, Request, Response } from "express";
 import helmet from "helmet";
 import mongoose from "mongoose";
 
@@ -9,8 +9,9 @@ import usersRoutes from "@routes/users";
 
 // setup environemnt variables
 dotenvConfig();
-const PORT = process.env.PORT ? +process.env.PORT : undefined;
-const MONGO = process.env.MONGO ? process.env.MONGO : undefined;
+const PORT = process.env.PORT;
+const MONGO = process.env.MONGO;
+const NODE_ENV = process.env.NODE_ENV;
 
 // setup mongoose & connect to database
 mongoose.set("strictQuery", true);
@@ -39,6 +40,26 @@ app.use(helmet());
 
 // routes
 app.use("/users", usersRoutes);
+
+// 404
+app.use((req, res) => {
+  // XXX
+  // log this in production? our front-end shoudln't be making such requests...
+  res.status(404).json({
+    message: `No resource found for ${req.method} request at ${req.url}`,
+  });
+});
+
+// handle any unforseen errors
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  const response =
+    NODE_ENV === "development"
+      ? { message: "Server error", error: err.name, stack: err.stack }
+      : { message: "Server error"};
+  // XXX
+  // maybe log the error in production?
+  res.status(500).json(response);
+});
 
 // start em up!
 app.listen(PORT ? PORT : 3000, () => {
