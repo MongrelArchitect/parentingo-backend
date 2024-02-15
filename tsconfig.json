@@ -10,10 +10,11 @@
     "skipLibCheck": true,
     "baseUrl": "./",
     "paths": {
+      "@configs/*": ["configs/*"],
       "@controllers/*": ["controllers/*"],
       "@interfaces/*": ["interfaces/*"],
       "@models/*": ["models/*"],
-      "@routes/*": ["routes/*"]
+      "@routes/*": ["routes/*"],
     },
   },
   "ts-node": {

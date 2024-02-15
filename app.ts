@@ -2,34 +2,13 @@
 import { config as dotenvConfig } from "dotenv";
 import express, { NextFunction, Request, Response } from "express";
 import helmet from "helmet";
-import mongoose from "mongoose";
 
 // route imports
 import usersRoutes from "@routes/users";
 
 // setup environemnt variables
 dotenvConfig();
-const PORT = process.env.PORT;
-const MONGO = process.env.MONGO;
 const NODE_ENV = process.env.NODE_ENV;
-
-// setup mongoose & connect to database
-mongoose.set("strictQuery", true);
-async function connectMongoDB() {
-  try {
-    if (MONGO) {
-      await mongoose.connect(MONGO);
-      console.log("Connected to MongoDB");
-    } else {
-      throw new Error(
-        "No mongoDB connection string - check environment variables",
-      );
-    }
-  } catch (err) {
-    console.error(err);
-  }
-}
-connectMongoDB();
 
 const app = express();
 
@@ -61,7 +40,4 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   res.status(500).json(response);
 });
 
-// start em up!
-app.listen(PORT ? PORT : 3000, () => {
-  console.log(`Server listening on port ${PORT}`);
-});
+export default app;
