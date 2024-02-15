@@ -1,7 +1,10 @@
 import supertest from "supertest";
+import app from "../../app";
 
 describe('POST /users', () => {
-  test('some example', () => {
-    expect(2 + 2).toBe(4);
+  it('handles missing form data', (done) => {
+    supertest(app)
+      .post("/users")
+      .expect(400, done);
   });
 });

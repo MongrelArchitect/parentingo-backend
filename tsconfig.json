@@ -14,8 +14,8 @@
       "@controllers/*": ["controllers/*"],
       "@interfaces/*": ["interfaces/*"],
       "@models/*": ["models/*"],
-      "@routes/*": ["routes/*"],
-    },
+      "@routes/*": ["routes/*"]
+    }
   },
   "ts-node": {
     "require": ["tsconfig-paths/register"]

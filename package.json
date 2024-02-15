@@ -34,6 +34,6 @@
     "build": "yarn tsc -p tsconfig.build.json",
     "start": "node dist/bin/server.js",
     "dev": "nodemon bin/server.ts",
-    "test": "yarn jest --watch"
+    "test": "yarn jest --watch --noStackTrace"
   }
 }

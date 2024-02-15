@@ -18,6 +18,9 @@ export default async function connectMongoDB() {
       );
     }
   } catch (err) {
+    // XXX
+    // better way to handle this? there's already middleware that checks for
+    // a connection & throws an error if there isn't one...
     console.error(err);
   }
 }

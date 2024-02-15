@@ -59,8 +59,7 @@ const createNewUser = [
   asyncHandler(async (req, res) => {
     const validationErrors = validationResult(req);
     if (!validationErrors.isEmpty()) {
-      res.status(400);
-      res.json({
+      res.status(400).json({
         message: "Invalid form data - see 'errors' for detail",
         errors: validationErrors.mapped(),
       });
@@ -84,15 +83,13 @@ const createNewUser = [
       const newUser = new UserModel(userInfo);
       const userDoc = await newUser.save();
 
-      res.status(201);
-      res.json({
+      res.status(201).json({
         message: "User created",
         user: userDoc,
       });
-    } catch(err) {
-      res.status(500);
-      res.json({
-        message: "Error when creating new user",
+    } catch (err) {
+      res.status(500).json({
+        message: "Error creating new user",
         error: err,
       });
     }
