@@ -63,35 +63,35 @@ const createNewUser = [
         message: "Invalid form data - see 'errors' for detail",
         errors: validationErrors.mapped(),
       });
-    }
+    } else {
+      const data = matchedData(req);
 
-    const data = matchedData(req);
+      try {
+        const hashedPass = await bcrypt.hash(data.password, 10);
 
-    try {
-      const hashedPass = await bcrypt.hash(data.password, 10);
+        const userInfo: UserInterface = {
+          email: data.email,
+          followers: [],
+          following: [],
+          lastLogin: new Date(),
+          name: data.name,
+          password: hashedPass,
+          username: data.username,
+        };
 
-      const userInfo: UserInterface = {
-        email: data.email,
-        followers: [],
-        following: [],
-        lastLogin: new Date(),
-        name: data.name,
-        password: hashedPass,
-        username: data.username,
-      };
+        const newUser = new UserModel(userInfo);
+        const userDoc = await newUser.save();
 
-      const newUser = new UserModel(userInfo);
-      const userDoc = await newUser.save();
-
-      res.status(201).json({
-        message: "User created",
-        user: userDoc,
-      });
-    } catch (err) {
-      res.status(500).json({
-        message: "Error creating new user",
-        error: err,
-      });
+        res.status(201).json({
+          message: "User created",
+          user: userDoc,
+        });
+      } catch (err) {
+        res.status(500).json({
+          message: "Error creating new user",
+          error: err,
+        });
+      }
     }
   }),
 ];

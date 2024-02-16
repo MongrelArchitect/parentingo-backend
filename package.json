@@ -22,6 +22,7 @@
     "@types/node": "^20.11.16",
     "@types/supertest": "^6.0.2",
     "jest": "^29.7.0",
+    "mongodb-memory-server": "^9.1.6",
     "nodemon": "^3.0.3",
     "prettier": "^3.2.5",
     "supertest": "^6.3.4",
@@ -34,6 +35,6 @@
     "build": "yarn tsc -p tsconfig.build.json",
     "start": "node dist/bin/server.js",
     "dev": "nodemon bin/server.ts",
-    "test": "yarn jest --watch --noStackTrace"
+    "test": "yarn jest --watch --noStackTrace --detectOpenHandles"
   }
 }
