@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import asyncHandler from "express-async-handler";
 import { body, matchedData, validationResult } from "express-validator";
+import passport from "passport";
 
 import UserInterface from "@interfaces/Users";
 import UserModel from "@models/user";
@@ -56,7 +57,7 @@ const createNewUser = [
     .isLength({ max: 255 })
     .withMessage("Name cannot be more than 255 characters"),
 
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req, res, next) => {
     const validationErrors = validationResult(req);
     if (!validationErrors.isEmpty()) {
       res.status(400).json({
@@ -80,18 +81,28 @@ const createNewUser = [
         };
 
         const newUser = new UserModel(userInfo);
-        const userDoc = await newUser.save();
+        await newUser.save();
 
-        res.status(201).json({
-          message: "User created",
-          user: userDoc,
-        });
+        next();
       } catch (err) {
         res.status(500).json({
           message: "Error creating new user",
           error: err,
         });
       }
+    }
+  }),
+
+  passport.authenticate("local"),
+
+  asyncHandler(async (req, res, next) => {
+    if (req.user) {
+      res.status(201).json({
+        message: "User created",
+        user: req.user,
+      });
+    } else {
+      next();
     }
   }),
 ];

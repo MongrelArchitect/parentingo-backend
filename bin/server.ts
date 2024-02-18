@@ -2,6 +2,8 @@ import { config as dotenvConfig } from "dotenv";
 import app from "app";
 import connectMongoDB from "@configs/mongoose";
 
+console.clear();
+
 // setup environemnt variables
 dotenvConfig();
 const PORT = process.env.PORT;
