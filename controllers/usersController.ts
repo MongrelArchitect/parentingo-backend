@@ -107,8 +107,17 @@ const createNewUser = [
   }),
 ];
 
+const getCurrentUser = asyncHandler(async (req, res) => {
+  if (req.isAuthenticated()) {
+    res.status(200).json(req.user);;
+  } else {
+    res.status(401).json({message: "Authentication required"});;
+  }
+});
+
 const usersController = {
   createNewUser,
+  getCurrentUser,
 };
 
 export default usersController;

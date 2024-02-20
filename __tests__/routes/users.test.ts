@@ -3,6 +3,9 @@ import app from "../../app";
 import UserModel from "@models/user";
 import UserInterface from "@interfaces/Users";
 
+// will be used to store session cookie data when user created / logged in
+let cookie = "";
+
 describe("POST /users", () => {
   supertest(app).post("/users").expect(400);
 
@@ -91,16 +94,37 @@ describe("POST /users", () => {
       );
   });
 
-  it("creates new user", (done) => {
-    supertest(app)
+  it("creates new user", async () => {
+    const res = await supertest(app)
       .post("/users")
       .type("form")
+      // we're gonna use this user in all subsequent tests that require auth
       .send({
         password: "Password123#",
         email: "ludwig@vonmises.com",
         name: "ludwig von mises",
         username: "praxman",
       })
-      .expect(201, done);
+      .expect(201);
+    // save cookie for other tests that require an authenticated session
+    cookie = res.headers["set-cookie"][0].split(";")[0];
+  });
+});
+
+describe("GET /users/current", () => {
+  it("handles unauthenticated user", (done) => {
+    supertest(app)
+      .get("/users/current")
+      .expect(401, { message: "Authentication required" }, done);
+  });
+
+  it("handles authenticated user", (done) => {
+    supertest(app)
+      .get("/users/current")
+      .set("Cookie", cookie)
+      .expect("Content-Type", /json/)
+      // length should be the same even if the id is different each test
+      .expect("Content-Length", "179")
+      .expect(200, done);
   });
 });

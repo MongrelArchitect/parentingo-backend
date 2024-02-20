@@ -39,6 +39,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
 }));
+app.use(passport.initialize());
 app.use(passport.session());
 app.use((req, res, next) => {
   // check connection to database before any read/write attempts
