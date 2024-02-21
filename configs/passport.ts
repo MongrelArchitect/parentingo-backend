@@ -19,6 +19,9 @@ export default function setupPassport() {
             message: "Incorrect username or password",
           });
         }
+        // update the user's login date
+        user.lastLogin = new Date();
+        await user.save();
         // we have our user, just need their id as a string
         return done(null, user._id.toString());
       } catch (err) {

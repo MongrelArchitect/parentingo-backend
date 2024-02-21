@@ -115,9 +115,40 @@ const getCurrentUser = asyncHandler(async (req, res) => {
   }
 });
 
+const loginUser = [
+  body("username")
+    .trim()
+    .escape()
+    .notEmpty()
+    .withMessage("Username required"),
+
+  body("password")
+    .notEmpty()
+    .withMessage("Password required"),
+
+  asyncHandler(async (req, res, next) => {
+    const validationErrors = validationResult(req);
+    if (!validationErrors.isEmpty()) {
+      res.status(400).json({
+        message: "Invalid form data - see 'errors' for detail",
+        errors: validationErrors.mapped(),
+      });
+    } else {
+      next();
+    }
+  }),
+
+  passport.authenticate("local", {failWithError: true}),
+
+  asyncHandler(async (req, res) => {
+    res.status(200).json({message: "Login successful", id: req.user});
+  }),
+];
+
 const usersController = {
   createNewUser,
   getCurrentUser,
+  loginUser,
 };
 
 export default usersController;

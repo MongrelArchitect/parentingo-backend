@@ -6,6 +6,14 @@ import UserInterface from "@interfaces/Users";
 // will be used to store session cookie data when user created / logged in
 let cookie = "";
 
+// this will be our valid test user
+const validUser = {
+    password: "Password123#",
+    email: "ludwig@vonmises.com",
+    name: "ludwig von mises",
+    username: "praxman",
+};
+
 describe("POST /users", () => {
   supertest(app).post("/users").expect(400);
 
@@ -100,10 +108,10 @@ describe("POST /users", () => {
       .type("form")
       // we're gonna use this user in all subsequent tests that require auth
       .send({
-        password: "Password123#",
-        email: "ludwig@vonmises.com",
-        name: "ludwig von mises",
-        username: "praxman",
+        password: validUser.password,
+        email: validUser.email,
+        name: validUser.name,
+        username: validUser.username,
       })
       .expect(201);
     // save cookie for other tests that require an authenticated session
@@ -127,4 +135,80 @@ describe("GET /users/current", () => {
       .expect("Content-Length", "179")
       .expect(200, done);
   });
+});
+
+describe("POST /users/login", () => {
+  it("handles missing form data", (done) => {
+    supertest(app)
+      .post("/users/login")
+      .expect(
+        400,
+        {
+          message: "Invalid form data - see 'errors' for detail",
+          errors: {
+            username: {
+              type: "field",
+              value: "",
+              msg: "Username required",
+              path: "username",
+              location: "body",
+            },
+            password: {
+              type: "field",
+              msg: "Password required",
+              path: "password",
+              location: "body",
+            },
+          },
+        },
+        done,
+      );
+  });
+
+  it("handles nonexistant username", (done) => {
+    supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "nobody",
+        password: "password",
+      })
+      .expect(
+        401,
+        { name: "AuthenticationError", message: "Unauthorized" },
+        done,
+      );
+  });
+
+  it("handles incorrect password", (done) => {
+    supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: validUser.username,
+        password: "badpass",
+      })
+      .expect(
+        401,
+        { name: "AuthenticationError", message: "Unauthorized" },
+        done,
+      );
+  });
+
+  it("handles correct username & password", (done) => {
+    supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: validUser.username,
+        password: validUser.password,
+      })
+      // id will be different, but should be the same length every time
+      .expect("Content-Length", "62")
+      .expect(
+        200,
+        done,
+      );
+  });
+
 });
