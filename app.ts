@@ -1,4 +1,5 @@
 // package imports
+import cors from "cors";
 import { config as dotenvConfig } from "dotenv";
 import express, { NextFunction, Request, Response } from "express";
 import session from "express-session";
@@ -15,6 +16,7 @@ import store from "@configs/sessionStore";
 
 // setup environemnt variables
 dotenvConfig();
+const CORS_ORIGIN = process.env.CORS_ORIGIN;
 const NODE_ENV = process.env.NODE_ENV;
 const SESSION_SECRET = process.env.SESSION_SECRET;
 if (!SESSION_SECRET) {
@@ -26,6 +28,9 @@ const app = express();
 setupPassport();
 
 // middleware
+app.use(cors({
+  origin: CORS_ORIGIN,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(helmet());
