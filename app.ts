@@ -49,6 +49,9 @@ app.use(
     store,
     resave: false,
     saveUninitialized: false,
+    cookie: {
+      sameSite: "strict",
+    },
   }),
 );
 app.use(passport.initialize());

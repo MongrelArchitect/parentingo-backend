@@ -109,22 +109,16 @@ const createNewUser = [
 
 const getCurrentUser = asyncHandler(async (req, res) => {
   if (req.isAuthenticated()) {
-    res.status(200).json(req.user);;
+    res.status(200).json(req.user);
   } else {
-    res.status(401).json({message: "Authentication required"});;
+    res.status(401).json({ message: "Authentication required" });
   }
 });
 
 const loginUser = [
-  body("username")
-    .trim()
-    .escape()
-    .notEmpty()
-    .withMessage("Username required"),
+  body("username").trim().escape().notEmpty().withMessage("Username required"),
 
-  body("password")
-    .notEmpty()
-    .withMessage("Password required"),
+  body("password").notEmpty().withMessage("Password required"),
 
   asyncHandler(async (req, res, next) => {
     const validationErrors = validationResult(req);
@@ -138,17 +132,31 @@ const loginUser = [
     }
   }),
 
-  passport.authenticate("local", {failWithError: true}),
+  passport.authenticate("local", { failWithError: true }),
 
   asyncHandler(async (req, res) => {
-    res.status(200).json({message: "Login successful", id: req.user});
+    res.status(200).json({ message: "Login successful", id: req.user });
   }),
 ];
+
+const logoutUser = asyncHandler(async (req, res, next) => {
+  if (req.isAuthenticated()) {
+    req.logout((err) => {
+      if (err) {
+        next(err);
+      }
+      res.status(200).json({message: "User logged out"});
+    });
+  } else {
+    res.status(401).json({ message: "Authentication required" });
+  }
+});
 
 const usersController = {
   createNewUser,
   getCurrentUser,
   loginUser,
+  logoutUser,
 };
 
 export default usersController;
