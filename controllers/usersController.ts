@@ -141,11 +141,17 @@ const loginUser = [
 
 const logoutUser = asyncHandler(async (req, res, next) => {
   if (req.isAuthenticated()) {
+    res.clearCookie("connect.sid");
     req.logout((err) => {
       if (err) {
         next(err);
       }
-      res.status(200).json({message: "User logged out"});
+      req.session.destroy((err) => {
+        if (err) {
+          next(err);
+        }
+        res.status(200).json({ message: "User logged out" });
+      });
     });
   } else {
     res.status(401).json({ message: "Authentication required" });
