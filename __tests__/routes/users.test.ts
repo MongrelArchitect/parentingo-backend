@@ -35,7 +35,7 @@ describe("POST /users", () => {
       .expect(
         400,
         {
-          message: "Invalid form data - see 'errors' for detail",
+          message: "Invalid input - check each field for errors",
           errors: {
             email: {
               type: "field",
@@ -83,7 +83,7 @@ describe("POST /users", () => {
       .expect(
         400,
         {
-          message: "Invalid form data - see 'errors' for detail",
+          message: "Invalid input - check each field for errors",
           errors: {
             email: {
               type: "field",

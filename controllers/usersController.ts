@@ -61,7 +61,7 @@ const createNewUser = [
     const validationErrors = validationResult(req);
     if (!validationErrors.isEmpty()) {
       res.status(400).json({
-        message: "Invalid form data - see 'errors' for detail",
+        message: "Invalid input - check each field for errors",
         errors: validationErrors.mapped(),
       });
     } else {
