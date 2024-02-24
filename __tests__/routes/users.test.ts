@@ -182,7 +182,11 @@ describe("POST /users/login", () => {
       .expect("Content-Type", /json/)
       .expect(
         401,
-        { name: "AuthenticationError", message: "Unauthorized" },
+        {
+          name: "AuthenticationError",
+          error: "AuthenticationError: Unauthorized",
+          message: "Unauthorized",
+        },
         done,
       );
   });
@@ -197,7 +201,11 @@ describe("POST /users/login", () => {
       })
       .expect(
         401,
-        { name: "AuthenticationError", message: "Unauthorized" },
+        {
+          name: "AuthenticationError",
+          error: "AuthenticationError: Unauthorized",
+          message: "Unauthorized",
+        },
         done,
       );
   });

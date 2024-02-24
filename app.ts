@@ -83,6 +83,7 @@ app.use(
     const statusCode = err.status;
     const response = {
       name: err.name,
+      error: err.toString(),
       message: err.message,
     };
 
