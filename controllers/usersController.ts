@@ -7,6 +7,20 @@ import UserInterface from "@interfaces/Users";
 import UserModel from "@models/user";
 
 const createNewUser = [
+  asyncHandler(async (req, res, next) => {
+    // already authenticated with active session, can't make new user
+    if (req.isAuthenticated()) {
+      res
+        .status(400)
+        .json({
+          message:
+            "Authenticated session already exists - log out to create new user",
+        });
+    } else {
+      next();
+    }
+  }),
+
   body("email")
     .trim()
     .escape()

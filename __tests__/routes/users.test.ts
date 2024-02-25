@@ -121,6 +121,28 @@ describe("POST /users", () => {
     // save cookie for other tests that require an authenticated session
     cookie = res.headers["set-cookie"][0].split(";")[0];
   });
+
+  it("handles attempt with authenticated user", (done) => {
+    supertest(app)
+      .post("/users/")
+      .set("Cookie", cookie)
+      .send({
+        password: validUser.password,
+        email: "new@email.com",
+        name: validUser.name,
+        username: "newname",
+      })
+      .expect("Content-Type", /json/)
+      // length should be the same even if the id is different each test
+      .expect(
+        400,
+        {
+          message:
+            "Authenticated session already exists - log out to create new user",
+        },
+        done,
+      );
+  });
 });
 
 describe("GET /users/current", () => {
