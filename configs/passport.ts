@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import UserModel from "@models/user";
+import UserInterface from "@interfaces/Users";
 
 export default function setupPassport() {
   passport.use(
@@ -43,16 +44,19 @@ export default function setupPassport() {
         if (!user) {
           return done(null, false);
         } else {
-          return done(null, {
+          const userInfo: UserInterface = {
             avatar: user.avatar,
             email: user.email,
             followers: user.followers,
             following: user.following,
-            id: user._id,
+            id: user.id,
+            // using the interface in our controllers, but with a junk pass
+            password: "",
             lastLogin: user.lastLogin,
             name: user.name,
             username: user.username,
-          });
+          };
+          return done(null, userInfo);
         }
       } catch (err) {
         done(err);

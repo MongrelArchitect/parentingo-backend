@@ -3,6 +3,7 @@ import { model, Schema } from "mongoose";
 import UserInterface from "@interfaces/Users";
 
 const userSchema = new Schema<UserInterface>({
+  id: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   name: { type: String, required: true },

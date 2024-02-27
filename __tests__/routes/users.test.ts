@@ -62,6 +62,7 @@ const usersTests = [
         const testUser: UserInterface = {
           password: "Password123#",
           email: "murray@rothbard.com",
+          id: "",
           name: "murray rothbard",
           username: "enemyofthestate",
           followers: [],
@@ -69,6 +70,7 @@ const usersTests = [
           lastLogin: new Date(),
         };
         const newUser = new UserModel(testUser);
+        newUser.id = newUser._id.toString();
         newUser.save();
 
         supertest(app)
@@ -161,7 +163,7 @@ const usersTests = [
           .set("Cookie", cookieControl.getCookie())
           .expect("Content-Type", /json/)
           // length should be the same even if the id is different each test
-          .expect("Content-Length", "179")
+          .expect("Content-Length", "193")
           .expect(200, done);
       });
     }),

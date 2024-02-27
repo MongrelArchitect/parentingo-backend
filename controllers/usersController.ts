@@ -10,12 +10,10 @@ const createNewUser = [
   asyncHandler(async (req, res, next) => {
     // already authenticated with active session, can't make new user
     if (req.isAuthenticated()) {
-      res
-        .status(400)
-        .json({
-          message:
-            "Authenticated session already exists - log out to create new user",
-        });
+      res.status(400).json({
+        message:
+          "Authenticated session already exists - log out to create new user",
+      });
     } else {
       next();
     }
@@ -79,31 +77,40 @@ const createNewUser = [
         errors: validationErrors.mapped(),
       });
     } else {
-      const data = matchedData(req);
+      next();
+    }
+  }),
 
-      try {
-        const hashedPass = await bcrypt.hash(data.password, 10);
+  asyncHandler(async (req, res, next) => {
+    const data = matchedData(req);
 
-        const userInfo: UserInterface = {
-          email: data.email,
-          followers: [],
-          following: [],
-          lastLogin: new Date(),
-          name: data.name,
-          password: hashedPass,
-          username: data.username,
-        };
+    try {
+      const hashedPass = await bcrypt.hash(data.password, 10);
 
-        const newUser = new UserModel(userInfo);
-        await newUser.save();
+      const userInfo: UserInterface = {
+        email: data.email,
+        followers: [],
+        following: [],
+        // id is required, but we don't have it yet
+        id: "",
+        lastLogin: new Date(),
+        name: data.name,
+        password: hashedPass,
+        username: data.username,
+      };
 
-        next();
-      } catch (err) {
-        res.status(500).json({
-          message: "Error creating new user",
-          error: err,
-        });
-      }
+      const newUser = new UserModel(userInfo);
+      // now we have the id, stringify it!
+      newUser.id = newUser._id.toString();
+
+      await newUser.save();
+
+      next();
+    } catch (err) {
+      res.status(500).json({
+        message: "Error creating new user",
+        error: err,
+      });
     }
   }),
 
