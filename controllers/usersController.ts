@@ -146,6 +146,16 @@ const loginUser = [
     }
   }),
 
+  asyncHandler(async (req, res, next) => {
+    if (req.isAuthenticated()) {
+      res.status(403).json({
+        message: "User already authenticated",
+      });
+    } else {
+      next();
+    }
+  }),
+
   passport.authenticate("local", { failWithError: true }),
 
   asyncHandler(async (req, res) => {

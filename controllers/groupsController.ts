@@ -7,8 +7,16 @@ const getGroupInfo = [
 ];
 
 const postNewGroup = [
+  asyncHandler(async (req, res, next) => {
+    if (req.isAuthenticated()) {
+      next();
+    } else {
+      res.status(401).json({ message: "User authentication required" });
+    }
+  }),
+
   asyncHandler(async (req, res) => {
-    res.status(401).json({message: "User authentication required" });
+    res.status(200).json({ message: "whoopsie daisy" });
   }),
 ];
 
