@@ -8,6 +8,7 @@ import { connection } from "mongoose";
 import passport from "passport";
 
 // route imports
+import groupsRoutes from "@routes/groups";
 import usersRoutes from "@routes/users";
 
 // configs
@@ -20,7 +21,6 @@ import PassportError from "@interfaces/PassportError";
 // setup environemnt variables
 dotenvConfig();
 const CORS_ORIGIN = process.env.CORS_ORIGIN;
-const NODE_ENV = process.env.NODE_ENV;
 const SESSION_SECRET = process.env.SESSION_SECRET;
 if (!SESSION_SECRET) {
   throw new Error("SESSION_SECRET is not defined");
@@ -66,6 +66,7 @@ app.use((req, res, next) => {
 });
 
 // routes
+app.use("/groups", groupsRoutes);
 app.use("/users", usersRoutes);
 
 // 404
