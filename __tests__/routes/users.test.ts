@@ -167,6 +167,36 @@ const usersTests = [
     }),
 
   () =>
+    describe("POST /users/logout", () => {
+      it("handles attempt without authenticated user", (done) => {
+        supertest(app)
+          .post("/users/logout")
+          .expect("Content-Type", /json/)
+          .expect(
+            401,
+            {
+              message: "Authentication required",
+            },
+            done,
+          );
+      });
+
+      it("handles attempt with authenticated user", (done) => {
+        supertest(app)
+          .post("/users/logout")
+          .set("Cookie", cookieControl.getCookie())
+          .expect("Content-Type", /json/)
+          .expect(
+            200,
+            {
+              message: "User logged out",
+            },
+            done,
+          );
+      });
+    }),
+
+  () =>
     describe("POST /users/login", () => {
       it("handles missing form data", (done) => {
         supertest(app)
@@ -235,6 +265,22 @@ const usersTests = [
           );
       });
 
+      it("handles correct username & password", async () => {
+        const res = await supertest(app)
+          .post("/users/login")
+          .type("form")
+          .send({
+            username: validUser.username,
+            password: validUser.password,
+          })
+          .expect("Content-Type", /json/)
+          // id will be different, but should be the same length every time
+          .expect("Content-Length", "62")
+          .expect(200);
+        // save cookie for other tests that require an authenticated session
+        cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+      });
+
       it("handles attempt with authenticated user", (done) => {
         supertest(app)
           .post("/users/login")
@@ -246,50 +292,6 @@ const usersTests = [
           })
           .expect("Content-Type", /json/)
           .expect(403, { message: "User already authenticated" }, done);
-      });
-
-      it("handles correct username & password", (done) => {
-        supertest(app)
-          .post("/users/login")
-          .type("form")
-          .send({
-            username: validUser.username,
-            password: validUser.password,
-          })
-          .expect("Content-Type", /json/)
-          // id will be different, but should be the same length every time
-          .expect("Content-Length", "62")
-          .expect(200, done);
-      });
-    }),
-
-  () =>
-    describe("POST /users/logout", () => {
-      it("handles attempt without authenticated user", (done) => {
-        supertest(app)
-          .post("/users/logout")
-          .expect("Content-Type", /json/)
-          .expect(
-            401,
-            {
-              message: "Authentication required",
-            },
-            done,
-          );
-      });
-
-      it("handles attempt with authenticated user", (done) => {
-        supertest(app)
-          .post("/users/logout")
-          .set("Cookie", cookieControl.getCookie())
-          .expect("Content-Type", /json/)
-          .expect(
-            200,
-            {
-              message: "User logged out",
-            },
-            done,
-          );
       });
     }),
 ];
