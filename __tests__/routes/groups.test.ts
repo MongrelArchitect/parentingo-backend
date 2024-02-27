@@ -48,6 +48,74 @@ const groupsTests = [
             done,
           );
       });
+
+      it("handles invalid data", (done) => {
+        supertest(app)
+          .post("/groups")
+          .set("Cookie", cookieControl.getCookie())
+          .type("form")
+          .send({
+            name: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          })
+          .expect("Content-Type", /json/)
+          .expect(
+            400,
+            {
+              message: "Invalid input - check each field for errors",
+              errors: {
+                name: {
+                  type: "field",
+                  value:
+                    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  msg: "Name cannot be more than 255 characters",
+                  path: "name",
+                  location: "body",
+                },
+              },
+            },
+            done,
+          );
+      });
+
+      it("creates new group", (done) => {
+        supertest(app)
+          .post("/groups")
+          .set("Cookie", cookieControl.getCookie())
+          .type("form")
+          .send({
+            name: "test group",
+          })
+          .expect("Content-Type", /json/)
+          .expect("Content-Length", "180")
+          .expect(201, done);
+      });
+
+      it("handles existing group name", (done) => {
+        supertest(app)
+          .post("/groups")
+          .set("Cookie", cookieControl.getCookie())
+          .type("form")
+          .send({
+            name: "test group",
+          })
+          .expect("Content-Type", /json/)
+          .expect(
+            400,
+            {
+              message: "Invalid input - check each field for errors",
+              errors: {
+                name: {
+                  type: "field",
+                  value: "test group",
+                  msg: "Group with that name already exists",
+                  path: "name",
+                  location: "body",
+                },
+              },
+            },
+            done,
+          );
+      });
     }),
 ];
 

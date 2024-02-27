@@ -42,6 +42,7 @@ const createNewUser = [
     .withMessage("Username required")
     .isLength({ min: 3, max: 20 })
     .withMessage("Username must be between 3-20 characters")
+    .toLowerCase()
     .custom(async (value) => {
       const existingUser = await UserModel.findOne({ username: value });
       if (existingUser) {
