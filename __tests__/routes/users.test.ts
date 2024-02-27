@@ -3,8 +3,7 @@ import app from "../../app";
 import UserModel from "@models/user";
 import UserInterface from "@interfaces/Users";
 
-// will be used to store session cookie data when user created / logged in
-let cookie = "";
+import cookieControl from "../config/session";
 
 // this will be our valid test user
 const validUser = {
@@ -119,13 +118,13 @@ describe("POST /users", () => {
       .expect("Content-Type", /json/)
       .expect(201);
     // save cookie for other tests that require an authenticated session
-    cookie = res.headers["set-cookie"][0].split(";")[0];
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
   });
 
   it("handles attempt with authenticated user", (done) => {
     supertest(app)
       .post("/users/")
-      .set("Cookie", cookie)
+      .set("Cookie", cookieControl.getCookie())
       .send({
         password: validUser.password,
         email: "new@email.com",
@@ -156,7 +155,7 @@ describe("GET /users/current", () => {
   it("handles authenticated user", (done) => {
     supertest(app)
       .get("/users/current")
-      .set("Cookie", cookie)
+      .set("Cookie", cookieControl.getCookie())
       .expect("Content-Type", /json/)
       // length should be the same even if the id is different each test
       .expect("Content-Length", "179")
@@ -261,7 +260,7 @@ describe("POST /users/logout", () => {
   it("handles attempt with authenticated user", (done) => {
     supertest(app)
       .post("/users/logout")
-      .set("Cookie", cookie)
+      .set("Cookie", cookieControl.getCookie())
       .expect("Content-Type", /json/)
       .expect(
         200,
