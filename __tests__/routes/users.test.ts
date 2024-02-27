@@ -1,5 +1,7 @@
 import supertest from "supertest";
 import app from "../../app";
+
+import GroupModel from "@models/group";
 import UserModel from "@models/user";
 import UserInterface from "@interfaces/Users";
 
@@ -7,10 +9,10 @@ import cookieControl from "../config/session";
 
 // this will be our valid test user
 const validUser = {
-  password: "Password123#",
-  email: "ludwig@vonmises.com",
-  name: "ludwig von mises",
-  username: "praxman",
+  password: "NoAuthority68!",
+  email: "lysander@mises.org",
+  name: "Lysander Spooner",
+  username: "notreason",
 };
 
 const usersTests = [
@@ -125,6 +127,11 @@ const usersTests = [
         cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
       });
 
+      it("adds newly created user to 'general' group", async () => {
+        const general = await GroupModel.findOne({name:"general"});
+        expect(general && general.members.length).toBe(2);
+      }),
+
       it("handles attempt with authenticated user", (done) => {
         supertest(app)
           .post("/users/")
@@ -163,7 +170,7 @@ const usersTests = [
           .set("Cookie", cookieControl.getCookie())
           .expect("Content-Type", /json/)
           // length should be the same even if the id is different each test
-          .expect("Content-Length", "193")
+          .expect("Content-Length", "194")
           .expect(200, done);
       });
     }),

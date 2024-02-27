@@ -3,6 +3,7 @@ import asyncHandler from "express-async-handler";
 import { body, matchedData, validationResult } from "express-validator";
 import passport from "passport";
 
+import GroupModel from "@models/group";
 import UserInterface from "@interfaces/Users";
 import UserModel from "@models/user";
 
@@ -105,6 +106,16 @@ const createNewUser = [
       newUser.id = newUser._id.toString();
 
       await newUser.save();
+
+      // add the new user to the "general" group
+      const general = await GroupModel.findOne({name:"general"});
+
+      if (!general) {
+        throw new Error("'General' group does not exist");
+      }
+
+      general.members.push(newUser.id);
+      await general.save();
 
       next();
     } catch (err) {
