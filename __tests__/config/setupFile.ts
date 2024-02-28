@@ -26,6 +26,7 @@ beforeAll(async () => {
     // add the "general" group that all new users are added to
     const groupInfo: GroupInterface = {
       name: "general",
+      description: "For general discussion about anything and everything",
       admin: newUser.id,
       mods: [newUser.id],
       members: [newUser.id],

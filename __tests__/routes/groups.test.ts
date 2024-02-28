@@ -2,6 +2,14 @@ import supertest from "supertest";
 import app from "../../app";
 import cookieControl from "../config/session";
 
+function getLongString(num: number) {
+  let string = "";
+  for (let i = 0; i < num; i += 1) {
+    string += "a";
+  }
+  return string;
+}
+
 const groupsTests = [
   () =>
     describe("GET /groups/:groupId", () => {
@@ -29,6 +37,7 @@ const groupsTests = [
           .type("form")
           .send({
             name: "",
+            description: "",
           })
           .expect("Content-Type", /json/)
           .expect(
@@ -43,6 +52,13 @@ const groupsTests = [
                   path: "name",
                   location: "body",
                 },
+                description: {
+                  type: "field",
+                  value: "",
+                  msg: "Description required",
+                  path: "description",
+                  location: "body",
+                },
               },
             },
             done,
@@ -55,7 +71,8 @@ const groupsTests = [
           .set("Cookie", cookieControl.getCookie())
           .type("form")
           .send({
-            name: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            name: getLongString(256),
+            description: getLongString(256),
           })
           .expect("Content-Type", /json/)
           .expect(
@@ -65,10 +82,16 @@ const groupsTests = [
               errors: {
                 name: {
                   type: "field",
-                  value:
-                    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  value: getLongString(256),
                   msg: "Name cannot be more than 255 characters",
                   path: "name",
+                  location: "body",
+                },
+                description: {
+                  type: "field",
+                  value: getLongString(256),
+                  msg: "Description cannot be more than 255 characters",
+                  path: "description",
                   location: "body",
                 },
               },
@@ -84,9 +107,10 @@ const groupsTests = [
           .type("form")
           .send({
             name: "test group",
+            description: "this is just a test",
           })
           .expect("Content-Type", /json/)
-          .expect("Content-Length", "180")
+          .expect("Content-Length", "216")
           .expect(201, done);
       });
 
@@ -97,6 +121,7 @@ const groupsTests = [
           .type("form")
           .send({
             name: "test group",
+            description: "this is just a test",
           })
           .expect("Content-Type", /json/)
           .expect(

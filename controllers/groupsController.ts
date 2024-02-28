@@ -35,6 +35,14 @@ const postNewGroup = [
       }
     }),
 
+  body("description")
+    .trim()
+    .escape()
+    .notEmpty()
+    .withMessage("Description required")
+    .isLength({ max: 255 })
+    .withMessage("Description cannot be more than 255 characters"),
+
   asyncHandler(async (req, res, next) => {
     const validationErrors = validationResult(req);
     if (!validationErrors.isEmpty()) {
@@ -55,6 +63,7 @@ const postNewGroup = [
         const groupInfo: GroupInterface = {
           admin: user.id, // user who creates the group is the admin
           name: data.name,
+          description: data.description,
           mods: [user.id], // admin is also a mod
           members: [user.id], // admins and mods are also members
         };
