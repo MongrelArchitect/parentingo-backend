@@ -12,6 +12,47 @@ function getLongString(num: number) {
 
 const groupsTests = [
   () =>
+    describe("GET /groups/owned", () => {
+      it("handles unauthenticated user", (done) => {
+        supertest(app)
+          .get("/groups/123")
+          .expect("Content-Type", /json/)
+          .expect(401, { message: "User authentication required" }, done);
+      });
+
+      it("handles user with no owned groups", (done) => {
+        supertest(app)
+          .get("/groups/owned")
+          .set("Cookie", cookieControl.getCookie())
+          .expect("Content-Type", /json/)
+          .expect(200, { message: "No owned groups found" }, done);
+      });
+
+      it("handles user with owned groups", async () => {
+        const res = await supertest(app)
+          .post("/users/login")
+          .type("form")
+          .send({
+            // user from setup file that owns the "general" group
+            username: "praxman",
+            password: "HumanAction123$",
+          })
+          .expect("Content-Type", /json/)
+          .expect(200);
+        // save cookie for future tests that require this user's session
+        cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+        await supertest(app)
+          .get("/groups/owned")
+          .set("Cookie", cookieControl.getCookie())
+          .expect("Content-Type", /json/)
+          .expect("Content-Length", "326")
+          .expect(200);
+      });
+    }),
+
+  () =>
+    // XXX
     describe("GET /groups/:groupId", () => {
       it("handles unauthenticated user", (done) => {
         supertest(app)
@@ -110,7 +151,7 @@ const groupsTests = [
             description: "this is just a test",
           })
           .expect("Content-Type", /json/)
-          .expect("Content-Length", "216")
+          .expect("Content-Length", "224")
           .expect(201, done);
       });
 

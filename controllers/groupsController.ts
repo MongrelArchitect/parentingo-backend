@@ -1,13 +1,52 @@
 import asyncHandler from "express-async-handler";
 import { body, matchedData, validationResult } from "express-validator";
 import GroupModel from "@models/group";
-import GroupInterface from "@interfaces/Groups";
+import GroupInterface, { GroupList } from "@interfaces/Groups";
 import UserInterface from "@interfaces/Users";
+import { Document } from "mongoose";
+
+function makeGroupList(groups: Document[]): GroupList {
+  const list: GroupList = {};
+  groups.forEach((group) => {
+    // XXX
+    // better way to do this?
+    const groupInfo = group as unknown as GroupInterface;
+    list[groupInfo.id] = {
+      name: groupInfo.name,
+      description: groupInfo.description,
+      id: groupInfo.id,
+      admin: groupInfo.admin,
+      mods: groupInfo.mods,
+      members: groupInfo.members,
+    };
+  });
+  return list;
+}
 
 const getGroupInfo = [
   // XXX
   asyncHandler(async (req, res) => {
     res.status(401).json({ message: "User authentication required" });
+  }),
+];
+
+const getOwnedGroups = [
+  // XXX
+  asyncHandler(async (req, res) => {
+    if (!req.user) {
+      res.status(401).json({ message: "User authentication required" });
+    } else {
+      const user = req.user as UserInterface;
+      const groups = await GroupModel.find({ admin: user.id });
+      if (!groups.length) {
+        res.status(200).json({ message: "No owned groups found" });
+      } else {
+        res.status(200).json({
+          message: `User owns ${groups.length} group${groups.length === 1 ? "" : "s"}`,
+          groups: makeGroupList(groups),
+        });
+      }
+    }
   }),
 ];
 
@@ -66,8 +105,10 @@ const postNewGroup = [
           description: data.description,
           mods: [user.id], // admin is also a mod
           members: [user.id], // admins and mods are also members
+          id: "",
         };
         const newGroup = new GroupModel(groupInfo);
+        newGroup.id = newGroup._id.toString();
         await newGroup.save();
         res
           .status(201)
@@ -86,6 +127,7 @@ const postNewGroup = [
 
 const groupsController = {
   getGroupInfo,
+  getOwnedGroups,
   postNewGroup,
 };
 

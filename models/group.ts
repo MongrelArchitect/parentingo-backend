@@ -5,6 +5,7 @@ import GroupInterface from "@interfaces/Groups";
 const groupSchema = new Schema<GroupInterface>({
   name: { type: String, required: true, unique: true },
   description: { type: String, required: true },
+  id: { type: String, required: true, unique: true },
   admin: { type: String, required: true },
   mods: { type: [String], required: true },
   members: { type: [String], required: true },

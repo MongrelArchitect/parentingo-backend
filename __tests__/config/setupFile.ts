@@ -1,3 +1,4 @@
+import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 import GroupModel from "@models/group";
 import GroupInterface from "@interfaces/Groups";
@@ -9,13 +10,14 @@ beforeAll(async () => {
   if (process.env.MONGO_TESTING_URI) {
     await mongoose.connect(process.env["MONGO_TESTING_URI"]);
     // add a user so we can test group operations
+    const hashedPass = await bcrypt.hash("HumanAction123$", 10);
     const userInfo: UserInterface = {
       email: "ludwig@mises.org",
       followers: [],
       following: [],
       id: "",
       lastLogin: new Date(),
-      password: "HumanAction123$",
+      password: hashedPass,
       name: "Ludwig von Mises",
       username: "praxman",
     };
@@ -30,8 +32,10 @@ beforeAll(async () => {
       admin: newUser.id,
       mods: [newUser.id],
       members: [newUser.id],
+      id: "",
     };
     const newGroup = new GroupModel(groupInfo);
+    newGroup.id = newGroup._id.toString();
     await newGroup.save();
   }
 });
