@@ -1,6 +1,7 @@
 import supertest from "supertest";
 import app from "../../app";
 import cookieControl from "../config/session";
+import GroupModel from "@models/group";
 
 function getLongString(num: number) {
   let string = "";
@@ -15,7 +16,7 @@ const groupsTests = [
     describe("GET /groups/owned", () => {
       it("handles unauthenticated user", (done) => {
         supertest(app)
-          .get("/groups/123")
+          .get("/groups/owned")
           .expect("Content-Type", /json/)
           .expect(401, { message: "User authentication required" }, done);
       });
@@ -66,7 +67,7 @@ const groupsTests = [
     describe("POST /groups", () => {
       it("handles unauthenticated user", (done) => {
         supertest(app)
-          .get("/groups/123")
+          .post("/groups/")
           .expect("Content-Type", /json/)
           .expect(401, { message: "User authentication required" }, done);
       });
@@ -183,6 +184,20 @@ const groupsTests = [
           );
       });
     }),
+
+    () => {
+      describe("PATCH /groups/:groupId/members", () => {
+        it ("handles unauthenticated user", async () => {
+          const group = await GroupModel.findOne({name:"general"});
+          if (!group) {
+            throw new Error("Error finding test group");
+          }
+          await supertest(app)
+            .patch(`/groups/${group.id}/members`)
+            .expect(401);
+        });
+      });
+    },
 ];
 
 export default groupsTests;

@@ -26,21 +26,13 @@ function makeGroupList(groups: Document[]): GroupList {
 const getGroupInfo = [
   // XXX
   asyncHandler(async (req, res) => {
-    res.status(401).json({ message: "User authentication required" });
+    res.status(200).json();
   }),
 ];
 
 const getMemberGroups = [];
 
 const getOwnedGroups = [
-  asyncHandler(async (req, res, next) => {
-    if (!req.user) {
-      res.status(401).json({ message: "User authentication required" });
-    } else {
-      next();
-    }
-  }),
-
   asyncHandler(async (req, res) => {
     try {
       const user = req.user as UserInterface;
@@ -62,15 +54,13 @@ const getOwnedGroups = [
   }),
 ];
 
-const postNewGroup = [
-  asyncHandler(async (req, res, next) => {
-    if (req.isAuthenticated()) {
-      next();
-    } else {
-      res.status(401).json({ message: "User authentication required" });
-    }
+const patchNewMember = [
+  asyncHandler(async (req, res) => {
+    res.status(200);
   }),
+];
 
+const postNewGroup = [
   body("name")
     .trim()
     .escape()
@@ -140,6 +130,7 @@ const postNewGroup = [
 const groupsController = {
   getGroupInfo,
   getOwnedGroups,
+  patchNewMember,
   postNewGroup,
 };
 
