@@ -30,12 +30,19 @@ const getGroupInfo = [
   }),
 ];
 
+const getMemberGroups = [];
+
 const getOwnedGroups = [
-  // XXX
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req, res, next) => {
     if (!req.user) {
       res.status(401).json({ message: "User authentication required" });
     } else {
+      next();
+    }
+  }),
+
+  asyncHandler(async (req, res) => {
+    try {
       const user = req.user as UserInterface;
       const groups = await GroupModel.find({ admin: user.id });
       if (!groups.length) {
@@ -46,6 +53,11 @@ const getOwnedGroups = [
           groups: makeGroupList(groups),
         });
       }
+    } catch (err) {
+      res.status(500).json({
+        message: "Error finding owned groups",
+        error: err,
+      });
     }
   }),
 ];

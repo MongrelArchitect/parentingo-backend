@@ -94,7 +94,7 @@ const createNewUser = [
         followers: [],
         following: [],
         // id is required, but we don't have it yet
-        id: "",
+        id: "tbd",
         lastLogin: new Date(),
         name: data.name,
         password: hashedPass,
