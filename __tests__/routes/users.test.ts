@@ -161,7 +161,7 @@ const usersTests = [
         supertest(app)
           .get("/users/current")
           .expect("Content-Type", /json/)
-          .expect(401, { message: "Authentication required" }, done);
+          .expect(401, { message: "User authentication required" }, done);
       });
 
       it("handles authenticated user", (done) => {
@@ -184,7 +184,7 @@ const usersTests = [
           .expect(
             401,
             {
-              message: "Authentication required",
+              message: "User authentication required",
             },
             done,
           );

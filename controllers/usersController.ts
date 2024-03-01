@@ -108,7 +108,9 @@ const createNewUser = [
       await newUser.save();
 
       // add the new user to the "general" group
-      const general = await GroupModel.findOne({name:"general"});
+      // XXX
+      // move out of here - have the front end do it via dedicated endpoint
+      const general = await GroupModel.findOne({ name: "general" });
 
       if (!general) {
         throw new Error("'General' group does not exist");
@@ -141,11 +143,7 @@ const createNewUser = [
 ];
 
 const getCurrentUser = asyncHandler(async (req, res) => {
-  if (req.isAuthenticated()) {
-    res.status(200).json(req.user);
-  } else {
-    res.status(401).json({ message: "Authentication required" });
-  }
+  res.status(200).json(req.user);
 });
 
 const loginUser = [
@@ -183,22 +181,18 @@ const loginUser = [
 ];
 
 const logoutUser = asyncHandler(async (req, res, next) => {
-  if (req.isAuthenticated()) {
-    res.clearCookie("connect.sid");
-    req.logout((err) => {
+  res.clearCookie("connect.sid");
+  req.logout((err) => {
+    if (err) {
+      next(err);
+    }
+    req.session.destroy((err) => {
       if (err) {
         next(err);
       }
-      req.session.destroy((err) => {
-        if (err) {
-          next(err);
-        }
-        res.status(200).json({ message: "User logged out" });
-      });
+      res.status(200).json({ message: "User logged out" });
     });
-  } else {
-    res.status(401).json({ message: "Authentication required" });
-  }
+  });
 });
 
 const usersController = {
