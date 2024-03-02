@@ -3,7 +3,7 @@ import { body, matchedData, validationResult } from "express-validator";
 import GroupModel from "@models/group";
 import GroupInterface, { GroupList } from "@interfaces/Groups";
 import UserInterface from "@interfaces/Users";
-import { Document } from "mongoose";
+import { Document, isValidObjectId } from "mongoose";
 
 function makeGroupList(groups: Document[]): GroupList {
   const list: GroupList = {};
@@ -55,8 +55,36 @@ const getOwnedGroups = [
 ];
 
 const patchNewMember = [
+  asyncHandler(async (req, res, next) => {
+    const { groupId } = req.params;
+    if (isValidObjectId(groupId)) {
+      next();
+    } else {
+      res.status(400).json({message: "Invalid group id" });
+    }
+  }),
+
   asyncHandler(async (req, res) => {
-    res.status(200);
+    const { groupId } = req.params;
+    const group = await GroupModel.findById(groupId)
+    console.log(group);
+    if (!group) {
+      res.status(404).json({message: `No group found with id "${groupId}"`});
+    } else {
+      try {
+        const user = req.user as UserInterface;
+        group.members.push(user.id);
+        await group.save();
+        res.status(200).json({
+          message: `User added to "${group.name}" group`,
+        });
+      } catch (err) {
+        res.status(500).json({
+          message: "Error adding user to group",
+          error: err,
+        });
+      }
+    }
   }),
 ];
 

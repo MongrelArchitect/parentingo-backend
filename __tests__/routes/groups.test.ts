@@ -47,7 +47,7 @@ const groupsTests = [
           .get("/groups/owned")
           .set("Cookie", cookieControl.getCookie())
           .expect("Content-Type", /json/)
-          .expect("Content-Length", "326")
+          .expect("Content-Length", "299")
           .expect(200);
       });
     }),
@@ -185,19 +185,56 @@ const groupsTests = [
       });
     }),
 
-    () => {
-      describe("PATCH /groups/:groupId/members", () => {
-        it ("handles unauthenticated user", async () => {
-          const group = await GroupModel.findOne({name:"general"});
-          if (!group) {
-            throw new Error("Error finding test group");
-          }
-          await supertest(app)
-            .patch(`/groups/${group.id}/members`)
-            .expect(401);
-        });
+  () => {
+    describe("PATCH /groups/:groupId/members", () => {
+      it("handles unauthenticated user", async () => {
+        const group = await GroupModel.findOne({ name: "general" });
+        if (!group) {
+          throw new Error("Error finding test group");
+        }
+        await supertest(app)
+          .patch(`/groups/${group.id}/members`)
+          .expect(401, { message: "User authentication required" });
       });
-    },
+
+      it("handles invalid group id", (done) => {
+        supertest(app)
+          .patch("/groups/badid123/members")
+          .set("Cookie", cookieControl.getCookie())
+          .expect(400, { message: 'Invalid group id' }, done);
+      });
+
+      it("handles valid but nonexistant group id", (done) => {
+        supertest(app)
+          .patch("/groups/601d0b50d91d180dd10d8f7a/members")
+          .set("Cookie", cookieControl.getCookie())
+          .expect(
+            404,
+            { message: 'No group found with id "601d0b50d91d180dd10d8f7a"' },
+            done,
+          );
+      });
+
+      it("handles authenticated user", async () => {
+        const group = await GroupModel.findOne({ name: "general" });
+        if (!group) {
+          throw new Error("Error finding test group");
+        }
+        await supertest(app)
+          .patch(`/groups/${group.id}/members`)
+          .set("Cookie", cookieControl.getCookie())
+          .expect(200, { message: `User added to "${group.name}" group` });
+      });
+
+      it("adds user to group", async () => {
+        const group = await GroupModel.findOne({ name: "general" });
+        if (!group) {
+          throw new Error("Error finding test group");
+        }
+        expect(group.members.length).toBe(2);
+      });
+    });
+  },
 ];
 
 export default groupsTests;
