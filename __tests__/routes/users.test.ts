@@ -127,11 +127,6 @@ const usersTests = [
         cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
       });
 
-      it("adds newly created user to 'general' group", async () => {
-        const general = await GroupModel.findOne({name:"general"});
-        expect(general && general.members.length).toBe(2);
-      }),
-
       it("handles attempt with authenticated user", (done) => {
         supertest(app)
           .post("/users/")

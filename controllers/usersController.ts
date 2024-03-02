@@ -104,21 +104,7 @@ const createNewUser = [
       const newUser = new UserModel(userInfo);
       // now we have the id, stringify it!
       newUser.id = newUser._id.toString();
-
       await newUser.save();
-
-      // add the new user to the "general" group
-      // XXX
-      // move out of here - have the front end do it via dedicated endpoint
-      const general = await GroupModel.findOne({ name: "general" });
-
-      if (!general) {
-        throw new Error("'General' group does not exist");
-      }
-
-      general.members.push(newUser.id);
-      await general.save();
-
       next();
     } catch (err) {
       res.status(500).json({
