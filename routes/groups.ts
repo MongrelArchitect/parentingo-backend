@@ -6,6 +6,13 @@ import auth from "@middleware/auth";
 
 const groupsRoutes = Router();
 
+// GET all groups that the currently authenticated user is a member of
+groupsRoutes.get(
+  "/member",
+  auth.isAuthenticated,
+  groupsController.getMemberGroups,
+);
+
 // GET all the groups for which the currently authenticated user is admin
 groupsRoutes.get(
   "/owned",
@@ -28,13 +35,6 @@ groupsRoutes.patch(
   "/:groupId/members",
   auth.isAuthenticated,
   groupsController.patchNewMember,
-);
-
-// GET all groups that the currently authenticated user is a member of
-groupsRoutes.get(
-  "/groups/member",
-  auth.isAuthenticated,
-  groupsController.getMemberGroups,
 );
 
 export default groupsRoutes;

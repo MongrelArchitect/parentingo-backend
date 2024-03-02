@@ -1,7 +1,7 @@
+import bcrypt from "bcrypt";
 import supertest from "supertest";
 import app from "../../app";
 
-import GroupModel from "@models/group";
 import UserModel from "@models/user";
 import UserInterface from "@interfaces/Users";
 
@@ -60,9 +60,10 @@ const usersTests = [
           );
       });
 
-      it("handles existing username & password", (done) => {
+      it("handles existing username & password", async () => {
+        const hashedPass = await bcrypt.hash("Password123#", 10);
         const testUser: UserInterface = {
-          password: "Password123#",
+          password: hashedPass,
           email: "murray@rothbard.com",
           id: "",
           name: "murray rothbard",
@@ -75,7 +76,7 @@ const usersTests = [
         newUser.id = newUser._id.toString();
         newUser.save();
 
-        supertest(app)
+        await supertest(app)
           .post("/users")
           .type("form")
           .send({
@@ -106,7 +107,6 @@ const usersTests = [
                 },
               },
             },
-            done,
           );
       });
 

@@ -35,7 +35,23 @@ const getGroupInfo = [
 // GET all groups that an authenticated user is a member of
 const getMemberGroups = [
   asyncHandler(async (req, res) => {
-    res.status(200).json();
+    try {
+      const user = req.user as UserInterface;
+      const groups = await GroupModel.find({ members: user.id });
+      if (!groups.length) {
+        res.status(200).json({ message: "Not a member of any groups" });
+      } else {
+        res.status(200).json({
+          message: `User is a member of ${groups.length} group${groups.length === 1 ? "" : "s"}`,
+          groups: makeGroupList(groups),
+        });
+      }
+    } catch (err) {
+      res.status(500).json({
+        message: "Error finding groups",
+        error: err,
+      });
+    }
   }),
 ];
 
@@ -69,15 +85,15 @@ const patchNewMember = [
     if (isValidObjectId(groupId)) {
       next();
     } else {
-      res.status(400).json({message: "Invalid group id" });
+      res.status(400).json({ message: "Invalid group id" });
     }
   }),
 
   asyncHandler(async (req, res) => {
     const { groupId } = req.params;
-    const group = await GroupModel.findById(groupId)
+    const group = await GroupModel.findById(groupId);
     if (!group) {
-      res.status(404).json({message: `No group found with id "${groupId}"`});
+      res.status(404).json({ message: `No group found with id "${groupId}"` });
     } else {
       try {
         const user = req.user as UserInterface;

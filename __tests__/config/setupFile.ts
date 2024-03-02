@@ -25,7 +25,7 @@ beforeAll(async () => {
     newUser.id = newUser._id.toString();
     await newUser.save();
 
-    // add the "general" group that all new users are added to
+    // add a "general" group for which "praxman" is the admin
     const groupInfo: GroupInterface = {
       name: "general",
       description: "For general discussion about anything and everything",

@@ -263,6 +263,44 @@ const groupsTests = [
       });
     });
   },
+
+  () => {
+    describe("GET /groups/member", () => {
+      it("handles unauthenticated user", (done) => {
+        supertest(app)
+          .get("/groups/member")
+          .expect(401, { message: "User authentication required" }, done);
+      });
+
+      it("handles user that belongs to a group", (done) => {
+        supertest(app)
+          .get("/groups/member")
+          .set("Cookie", cookieControl.getCookie())
+          .expect("Content-Length", "336")
+          .expect(200, done);
+      });
+
+      it("handles user that doesn't belong to a group", async () => {
+        const res = await supertest(app)
+          .post("/users/login")
+          .type("form")
+          .send({
+            // user from setup file that owns the "general" group
+            username: "enemyofthestate",
+            password: "Password123#",
+          })
+          .expect("Content-Type", /json/)
+          .expect(200);
+        // save cookie for future tests that require this user's session
+        cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+        await supertest(app)
+          .get("/groups/member")
+          .set("Cookie", cookieControl.getCookie())
+          .expect(200, { message: "Not a member of any groups" });
+      });
+    });
+  },
 ];
 
 export default groupsTests;
