@@ -144,6 +144,9 @@ const patchNewMod = [
   }),
 
   asyncHandler(async (req, res) => {
+    // XXX
+    // this is full of confusing control flow...better way to break it up
+    // without making multiple database queries?
     try {
       // we've got valid group & user ids, try and find 'em
       const { groupId, userId } = req.params;
@@ -158,8 +161,13 @@ const patchNewMod = [
             .status(403)
             .json({ message: "Only group admin can designate mods" });
         } else {
+          if (!group.members.includes(userToBeMod.id)) {
+            // only group members can be mods
+            res.status(400).json({
+              message: "Only group members can be mods",
+            });
+          }
           // admin = go for it
-          // TODO XXX
           group.mods.push(userToBeMod.id);
           await group.save();
           res.status(200).json({

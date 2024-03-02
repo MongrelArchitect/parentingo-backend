@@ -423,6 +423,24 @@ const groupsTests = [
         expect(group.mods.length).toBe(2);
         expect(group.mods.includes(user.id)).toBeTruthy();
       });
+
+      it("denies request if user is not a group member", async () => {
+        const group = await GroupModel.findOne({ name: "general" });
+        if (!group) {
+          throw new Error("Error finding test group");
+        }
+        const user = await UserModel.findOne({ username: "enemyofthestate" });
+        if (!user) {
+          throw new Error("Error finding test user");
+        }
+        await supertest(app)
+          .patch(`/groups/${group.id}/mods/${user.id}`)
+          .set("Cookie", cookieControl.getCookie())
+          .expect(400, {
+            message: "Only group members can be mods",
+          });
+      });
+
     });
   },
 ];
