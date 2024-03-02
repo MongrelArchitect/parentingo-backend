@@ -2,6 +2,7 @@ import supertest from "supertest";
 import app from "../../app";
 import cookieControl from "../config/session";
 import GroupModel from "@models/group";
+import UserModel from "@models/user";
 
 function getLongString(num: number) {
   let string = "";
@@ -285,7 +286,6 @@ const groupsTests = [
           .post("/users/login")
           .type("form")
           .send({
-            // user from setup file that owns the "general" group
             username: "enemyofthestate",
             password: "Password123#",
           })
@@ -298,6 +298,130 @@ const groupsTests = [
           .get("/groups/member")
           .set("Cookie", cookieControl.getCookie())
           .expect(200, { message: "Not a member of any groups" });
+      });
+    });
+  },
+
+  () => {
+    describe("PATCH /groups/:groupId/mods", () => {
+      it("handles unauthenticated user", (done) => {
+        supertest(app)
+          .patch("/groups/123abc/mods/321def")
+          .expect(401, { message: "User authentication required" }, done);
+      });
+
+      it("handles invalid group id", (done) => {
+        supertest(app)
+          .patch("/groups/badgroupid/mods/baduserid")
+          .set("Cookie", cookieControl.getCookie())
+          .expect(400, { message: "Invalid group id" }, done);
+      });
+
+      it("handles nonexistant group with real user", async () => {
+        const user = await UserModel.findOne({ username: "notreason" });
+        if (!user) {
+          throw new Error("Error finding test user");
+        }
+        await supertest(app)
+          .patch(`/groups/601d0b50d91d180dd10d8f7a/mods/${user.id}`)
+          .set("Cookie", cookieControl.getCookie())
+          .expect(404, {
+            message: "No group found with id 601d0b50d91d180dd10d8f7a",
+          });
+      });
+
+      it("handles invalid user with nonexistant group", (done) => {
+        supertest(app)
+          .patch("/groups/601d0b50d91d180dd10d8f7a/mods/baduserid")
+          .set("Cookie", cookieControl.getCookie())
+          .expect(400, { message: "Invalid user id" }, done);
+      });
+
+      it("handles nonexistant user with real group", async () => {
+        const group = await GroupModel.findOne({ name: "general" });
+        if (!group) {
+          throw new Error("Error finding test group");
+        }
+        await supertest(app)
+          .patch(`/groups/${group.id}/mods/601d0b50d91d180dd10d8f7a`)
+          .set("Cookie", cookieControl.getCookie())
+          .expect(404, {
+            message: "No user found with id 601d0b50d91d180dd10d8f7a",
+          });
+      });
+
+      it("handles valid but nonexistant group & user", (done) => {
+        supertest(app)
+          .patch(
+            "/groups/601d0b50d91d180dd10d8f7a/mods/601d0b50d91d180dd10d8f7a",
+          )
+          .set("Cookie", cookieControl.getCookie())
+          .expect(
+            404,
+            {
+              message:
+                "No group found with id 601d0b50d91d180dd10d8f7a and no user found with id 601d0b50d91d180dd10d8f7a",
+            },
+            done,
+          );
+      });
+
+      it("handles non-admin making the request", async () => {
+        const group = await GroupModel.findOne({ name: "general" });
+        if (!group) {
+          throw new Error("Error finding test group");
+        }
+        const user = await UserModel.findOne({ username: "notreason" });
+        if (!user) {
+          throw new Error("Error finding test user");
+        }
+        await supertest(app)
+          .patch(`/groups/${group.id}/mods/${user.id}`)
+          .set("Cookie", cookieControl.getCookie())
+          .expect(403, { message: "Only group admin can designate mods" });
+      });
+
+      it("successfully designates user as mod", async () => {
+        const res = await supertest(app)
+          .post("/users/login")
+          .type("form")
+          .send({
+            // the admin of our "general" group
+            username: "praxman",
+            password: "HumanAction123$",
+          })
+          .expect("Content-Type", /json/)
+          .expect(200);
+        // save cookie for future tests that require this user's session
+        cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+        const group = await GroupModel.findOne({ name: "general" });
+        if (!group) {
+          throw new Error("Error finding test group");
+        }
+        const user = await UserModel.findOne({ username: "notreason" });
+        if (!user) {
+          throw new Error("Error finding test user");
+        }
+        await supertest(app)
+          .patch(`/groups/${group.id}/mods/${user.id}`)
+          .set("Cookie", cookieControl.getCookie())
+          .expect(200, {
+            message: `${user.username} added as mod to ${group.name} group`,
+          });
+      });
+
+      it ("has the correct number of mods in array", async () => {
+        const group = await GroupModel.findOne({ name: "general" });
+        if (!group) {
+          throw new Error("Error finding test group");
+        }
+        const user = await UserModel.findOne({ username: "notreason" });
+        if (!user) {
+          throw new Error("Error finding test user");
+        }
+        expect(group.mods.length).toBe(2);
+        expect(group.mods.includes(user.id)).toBeTruthy();
       });
     });
   },

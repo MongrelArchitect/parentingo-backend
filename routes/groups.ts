@@ -30,11 +30,18 @@ groupsRoutes.get(
 // POST to create a new group
 groupsRoutes.post("/", auth.isAuthenticated, groupsController.postNewGroup);
 
-// PATCH to add a member to an existing group
+// PATCH to add the current user to an existing group as a member
 groupsRoutes.patch(
   "/:groupId/members",
   auth.isAuthenticated,
   groupsController.patchNewMember,
+);
+
+// PATCH to add a specified member to an existing group as a mod
+groupsRoutes.patch(
+  "/:groupId/mods/:userId",
+  auth.isAuthenticated,
+  groupsController.patchNewMod,
 );
 
 export default groupsRoutes;
