@@ -30,4 +30,11 @@ groupsRoutes.patch(
   groupsController.patchNewMember,
 );
 
+// GET all groups that the currently authenticated user is a member of
+groupsRoutes.get(
+  "/groups/member",
+  auth.isAuthenticated,
+  groupsController.getMemberGroups,
+);
+
 export default groupsRoutes;

@@ -3,10 +3,10 @@ import asyncHandler from "express-async-handler";
 import { body, matchedData, validationResult } from "express-validator";
 import passport from "passport";
 
-import GroupModel from "@models/group";
 import UserInterface from "@interfaces/Users";
 import UserModel from "@models/user";
 
+// POST to create a new user
 const createNewUser = [
   asyncHandler(async (req, res, next) => {
     // already authenticated with active session, can't make new user
@@ -128,10 +128,12 @@ const createNewUser = [
   }),
 ];
 
+// GET the currerntly authenticated user's deserialized info
 const getCurrentUser = asyncHandler(async (req, res) => {
   res.status(200).json(req.user);
 });
 
+// POST to login a user
 const loginUser = [
   body("username").trim().escape().notEmpty().withMessage("Username required"),
 
@@ -165,7 +167,8 @@ const loginUser = [
     res.status(200).json({ message: "Login successful", id: req.user });
   }),
 ];
-
+ 
+// POST to logout a user, clear cookies & delete session from database
 const logoutUser = asyncHandler(async (req, res, next) => {
   res.clearCookie("connect.sid");
   req.logout((err) => {

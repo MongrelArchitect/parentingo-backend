@@ -201,7 +201,7 @@ const groupsTests = [
         supertest(app)
           .patch("/groups/badid123/members")
           .set("Cookie", cookieControl.getCookie())
-          .expect(400, { message: 'Invalid group id' }, done);
+          .expect(400, { message: "Invalid group id" }, done);
       });
 
       it("handles valid but nonexistant group id", (done) => {
@@ -216,6 +216,20 @@ const groupsTests = [
       });
 
       it("handles authenticated user", async () => {
+        // first we need a user that isn't already in the group
+        const res = await supertest(app)
+          .post("/users/login")
+          .type("form")
+          .send({
+            // user from setup file that owns the "general" group
+            username: "notreason",
+            password: "NoAuthority68!",
+          })
+          .expect("Content-Type", /json/)
+          .expect(200);
+        // save cookie for future tests that require this user's session
+        cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
         const group = await GroupModel.findOne({ name: "general" });
         if (!group) {
           throw new Error("Error finding test group");
@@ -232,6 +246,20 @@ const groupsTests = [
           throw new Error("Error finding test group");
         }
         expect(group.members.length).toBe(2);
+      });
+
+      it("handles user already in group", async () => {
+        const group = await GroupModel.findOne({ name: "general" });
+        if (!group) {
+          throw new Error("Error finding test group");
+        }
+        expect(group.members.length).toBe(2);
+        await supertest(app)
+          .patch(`/groups/${group.id}/members`)
+          .set("Cookie", cookieControl.getCookie())
+          .expect(400, {
+            message: `User already member of "${group.name}" group`,
+          });
       });
     });
   },

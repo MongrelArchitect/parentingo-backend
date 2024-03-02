@@ -6,6 +6,7 @@ import UserInterface from "@interfaces/Users";
 import { Document, isValidObjectId } from "mongoose";
 
 function makeGroupList(groups: Document[]): GroupList {
+  // could just return the raw array, but i want it a bit cleaner...
   const list: GroupList = {};
   groups.forEach((group) => {
     // XXX
@@ -23,6 +24,7 @@ function makeGroupList(groups: Document[]): GroupList {
   return list;
 }
 
+// GET info for a single group
 const getGroupInfo = [
   // XXX
   asyncHandler(async (req, res) => {
@@ -30,8 +32,14 @@ const getGroupInfo = [
   }),
 ];
 
-const getMemberGroups = [];
+// GET all groups that an authenticated user is a member of
+const getMemberGroups = [
+  asyncHandler(async (req, res) => {
+    res.status(200).json();
+  }),
+];
 
+// GET all groups that an authenticated user owns / is admin of
 const getOwnedGroups = [
   asyncHandler(async (req, res) => {
     try {
@@ -54,6 +62,7 @@ const getOwnedGroups = [
   }),
 ];
 
+// PACTH to add a new member to an existing group
 const patchNewMember = [
   asyncHandler(async (req, res, next) => {
     const { groupId } = req.params;
@@ -67,17 +76,22 @@ const patchNewMember = [
   asyncHandler(async (req, res) => {
     const { groupId } = req.params;
     const group = await GroupModel.findById(groupId)
-    console.log(group);
     if (!group) {
       res.status(404).json({message: `No group found with id "${groupId}"`});
     } else {
       try {
         const user = req.user as UserInterface;
-        group.members.push(user.id);
-        await group.save();
-        res.status(200).json({
-          message: `User added to "${group.name}" group`,
-        });
+        if (group.members.includes(user.id)) {
+          res.status(400).json({
+            message: `User already member of "${group.name}" group`,
+          });
+        } else {
+          group.members.push(user.id);
+          await group.save();
+          res.status(200).json({
+            message: `User added to "${group.name}" group`,
+          });
+        }
       } catch (err) {
         res.status(500).json({
           message: "Error adding user to group",
@@ -88,6 +102,7 @@ const patchNewMember = [
   }),
 ];
 
+// POST to create a new group with currently authenticated user as admin / owner
 const postNewGroup = [
   body("name")
     .trim()
@@ -157,6 +172,7 @@ const postNewGroup = [
 
 const groupsController = {
   getGroupInfo,
+  getMemberGroups,
   getOwnedGroups,
   patchNewMember,
   postNewGroup,
