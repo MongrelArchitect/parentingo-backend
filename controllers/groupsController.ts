@@ -29,9 +29,31 @@ function makeGroupList(groups: Document[]): GroupList {
 
 // GET info for a single group
 const getGroupInfo = [
-  // XXX
+  asyncHandler(async (req, res, next) => {
+    const { groupId } = req.params;
+    if (isValidObjectId(groupId)) {
+      next();
+    } else {
+      res.status(400).json({ message: "Invalid group id" });
+    }
+  }),
+
   asyncHandler(async (req, res) => {
-    res.status(200).json();
+    const { groupId } = req.params;
+    const groupInfo = await GroupModel.findById(groupId);
+    if (!groupInfo) {
+      res.status(404).json({ message: `No group found with id ${groupId}` });
+    } else {
+      const group: GroupInterface = {
+        name: groupInfo.name,
+        description: groupInfo.description,
+        admin: groupInfo.admin,
+        mods: groupInfo.mods,
+        members: groupInfo.members,
+        id: groupInfo.id,
+      };
+      res.status(200).json({ message: "Group found", group });
+    }
   }),
 ];
 

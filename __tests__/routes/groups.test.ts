@@ -54,13 +54,43 @@ const groupsTests = [
     }),
 
   () =>
-    // XXX
     describe("GET /groups/:groupId", () => {
       it("handles unauthenticated user", (done) => {
         supertest(app)
           .get("/groups/123")
           .expect("Content-Type", /json/)
           .expect(401, { message: "User authentication required" }, done);
+      });
+
+      it("handles invalid group id", (done) => {
+        supertest(app)
+          .get("/groups/badid123/")
+          .set("Cookie", cookieControl.getCookie())
+          .expect(400, { message: "Invalid group id" }, done);
+      });
+
+      it("handles valid but nonexistant group id", (done) => {
+        supertest(app)
+          .get("/groups/601d0b50d91d180dd10d8f7a/")
+          .set("Cookie", cookieControl.getCookie())
+          .expect(
+            404,
+            { message: 'No group found with id 601d0b50d91d180dd10d8f7a' },
+            done,
+          );
+      });
+
+      it("responds with group info", async () => {
+        const group = await GroupModel.findOne({name:"general"});
+        if (!group) {
+          throw new Error("Error finding test group");
+        }
+
+        await supertest(app)
+          .get(`/groups/${group.id}/`)
+          .set("Cookie", cookieControl.getCookie())
+          .expect("Content-Length", "263")
+          .expect(200);
       });
     }),
 
