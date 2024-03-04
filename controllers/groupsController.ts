@@ -22,6 +22,7 @@ function makeGroupList(groups: Document[]): GroupList {
       admin: groupInfo.admin,
       mods: groupInfo.mods,
       members: groupInfo.members,
+      banned: groupInfo.banned,
     };
   });
   return list;
@@ -51,6 +52,7 @@ const getGroupInfo = [
         mods: groupInfo.mods,
         members: groupInfo.members,
         id: groupInfo.id,
+        banned: groupInfo.banned,
       };
       res.status(200).json({ message: "Group found", group });
     }
@@ -125,6 +127,10 @@ const patchNewMember = [
         if (group.members.includes(user.id)) {
           res.status(400).json({
             message: `User already member of "${group.name}" group`,
+          });
+        } else if (group.banned.includes(user.id)) {
+          res.status(403).json({
+            message: `User banned from joining ${group.name} group`
           });
         } else {
           group.members.push(user.id);
@@ -272,6 +278,7 @@ const postNewGroup = [
           mods: [user.id], // admin is also a mod
           members: [user.id], // admins and mods are also members
           id: "",
+          banned: [],
         };
         const newGroup = new GroupModel(groupInfo);
         newGroup.id = newGroup._id.toString();

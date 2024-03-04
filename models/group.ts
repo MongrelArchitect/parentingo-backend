@@ -9,6 +9,7 @@ const groupSchema = new Schema<GroupInterface>({
   admin: { type: String, required: true },
   mods: { type: [String], required: true },
   members: { type: [String], required: true },
+  banned: { type: [String], required: true },
 });
 
 const GroupModel = model<GroupInterface>("Group", groupSchema);

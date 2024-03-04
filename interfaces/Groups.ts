@@ -5,6 +5,7 @@ export default interface GroupInterface {
   admin: string; // id of single user
   mods: string[]; // array of user ids
   members: string[]; // array of user ids
+  banned: string[]; // array of user ids that will be blocked from joining
 }
 
 export interface GroupList {

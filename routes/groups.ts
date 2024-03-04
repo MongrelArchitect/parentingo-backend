@@ -6,6 +6,12 @@ import auth from "@middleware/auth";
 
 const groupsRoutes = Router();
 
+// DELETE to demote a user from mod to ordinary member
+// XXX
+
+// DELETE to remove a user from group membership
+// XXX
+
 // GET all groups that the currently authenticated user is a member of
 groupsRoutes.get(
   "/member",
@@ -43,5 +49,8 @@ groupsRoutes.patch(
   auth.isAuthenticated,
   groupsController.patchNewMod,
 );
+
+// PATCH to ban a user from joining a group
+// XXX
 
 export default groupsRoutes;

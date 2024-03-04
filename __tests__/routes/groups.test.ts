@@ -48,7 +48,7 @@ const groupsTests = [
           .get("/groups/owned")
           .set("Cookie", cookieControl.getCookie())
           .expect("Content-Type", /json/)
-          .expect("Content-Length", "299")
+          .expect("Content-Length", "337")
           .expect(200);
       });
     }),
@@ -75,13 +75,13 @@ const groupsTests = [
           .set("Cookie", cookieControl.getCookie())
           .expect(
             404,
-            { message: 'No group found with id 601d0b50d91d180dd10d8f7a' },
+            { message: "No group found with id 601d0b50d91d180dd10d8f7a" },
             done,
           );
       });
 
       it("responds with group info", async () => {
-        const group = await GroupModel.findOne({name:"general"});
+        const group = await GroupModel.findOne({ name: "general" });
         if (!group) {
           throw new Error("Error finding test group");
         }
@@ -89,7 +89,7 @@ const groupsTests = [
         await supertest(app)
           .get(`/groups/${group.id}/`)
           .set("Cookie", cookieControl.getCookie())
-          .expect("Content-Length", "263")
+          .expect("Content-Length", "301")
           .expect(200);
       });
     }),
@@ -183,7 +183,7 @@ const groupsTests = [
             description: "this is just a test",
           })
           .expect("Content-Type", /json/)
-          .expect("Content-Length", "224")
+          .expect("Content-Length", "236")
           .expect(201, done);
       });
 
@@ -292,6 +292,32 @@ const groupsTests = [
             message: `User already member of "${group.name}" group`,
           });
       });
+
+      it("doesn't add user if they're banned", async () => {
+        // first we need our banned user to login
+        const res = await supertest(app)
+          .post("/users/login")
+          .type("form")
+          .send({
+            username: "imbanned",
+            password: "ImBanned123#",
+          })
+          .expect("Content-Type", /json/)
+          .expect(200);
+        // save cookie for future tests that require this user's session
+        cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+        const group = await GroupModel.findOne({ name: "general" });
+        if (!group) {
+          throw new Error("Error finding test group");
+        }
+        await supertest(app)
+          .patch(`/groups/${group.id}/members`)
+          .set("Cookie", cookieControl.getCookie())
+          .expect(403, {
+            message: `User banned from joining ${group.name} group`,
+          });
+      });
     });
   },
 
@@ -303,12 +329,24 @@ const groupsTests = [
           .expect(401, { message: "User authentication required" }, done);
       });
 
-      it("handles user that belongs to a group", (done) => {
+      it("handles user that belongs to a group", async () => {
+        const res = await supertest(app)
+          .post("/users/login")
+          .type("form")
+          .send({
+            username: "praxman",
+            password: "HumanAction123$",
+          })
+          .expect("Content-Type", /json/)
+          .expect(200);
+        // save cookie for future tests that require this user's session
+        cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
         supertest(app)
           .get("/groups/member")
           .set("Cookie", cookieControl.getCookie())
-          .expect("Content-Length", "336")
-          .expect(200, done);
+          .expect("Content-Length", "374")
+          .expect(200);
       });
 
       it("handles user that doesn't belong to a group", async () => {
@@ -333,7 +371,7 @@ const groupsTests = [
   },
 
   () => {
-    describe("PATCH /groups/:groupId/mods", () => {
+    describe("PATCH /groups/:groupId/mods/:userId", () => {
       it("handles unauthenticated user", (done) => {
         supertest(app)
           .patch("/groups/123abc/mods/321def")
@@ -441,7 +479,7 @@ const groupsTests = [
           });
       });
 
-      it ("has the correct number of mods in array", async () => {
+      it("has the correct number of mods in array", async () => {
         const group = await GroupModel.findOne({ name: "general" });
         if (!group) {
           throw new Error("Error finding test group");
@@ -470,7 +508,6 @@ const groupsTests = [
             message: "Only group members can be mods",
           });
       });
-
     });
   },
 ];

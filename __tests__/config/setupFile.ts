@@ -25,6 +25,22 @@ beforeAll(async () => {
     newUser.id = newUser._id.toString();
     await newUser.save();
 
+    // add a user that will be banned from the "general" group
+    const bannedPass = await bcrypt.hash("ImBanned123#", 10);
+    const bannedInfo: UserInterface = {
+      email: "bad@banned.com",
+      followers: [],
+      following: [],
+      id: "",
+      lastLogin: new Date(),
+      password: bannedPass,
+      name: "Bad Actor",
+      username: "imbanned",
+    };
+    const bannedUser = new UserModel(bannedInfo);
+    bannedUser.id = bannedUser._id.toString();
+    await bannedUser.save();
+
     // add a "general" group for which "praxman" is the admin
     const groupInfo: GroupInterface = {
       name: "general",
@@ -33,6 +49,7 @@ beforeAll(async () => {
       mods: [newUser.id],
       members: [newUser.id],
       id: "",
+      banned: [bannedUser.id],
     };
     const newGroup = new GroupModel(groupInfo);
     newGroup.id = newGroup._id.toString();
