@@ -28,6 +28,85 @@ function makeGroupList(groups: Document[]): GroupList {
   return list;
 }
 
+// PATCH to demote a user from mod to regular member
+const deleteFromMods = [
+  // first check valid group id
+  asyncHandler(async (req, res, next) => {
+    const { groupId } = req.params;
+    if (isValidObjectId(groupId)) {
+      next();
+    } else {
+      res.status(400).json({ message: "Invalid group id" });
+    }
+  }),
+
+  // then check valid user id
+  asyncHandler(async (req, res, next) => {
+    const { userId } = req.params;
+    if (isValidObjectId(userId)) {
+      next();
+    } else {
+      res.status(400).json({ message: "Invalid user id" });
+    }
+  }),
+
+  asyncHandler(async (req, res) => {
+    // XXX
+    // this is full of confusing control flow...better way to break it up
+    // without making multiple database queries?
+    try {
+      // we've got valid group & user ids, try and find 'em
+      const { groupId, userId } = req.params;
+      const group = await GroupModel.findById(groupId);
+      const userToBeDemoted = await UserModel.findById(userId);
+      if (group && userToBeDemoted) {
+        // found 'em both, time to see if it's the admin making the request
+        const authUser = req.user as UserInterface;
+        if (group.admin !== authUser.id) {
+          // not admin = no go
+          res.status(403).json({ message: "Only group admin can demote mods" });
+        } else {
+          if (!group.mods.includes(userToBeDemoted.id)) {
+            // only group members can be mods
+            res.status(400).json({
+              message: "Only mods can be demoted",
+            });
+          } else {
+            // admin = go for it
+            group.mods.splice(group.mods.indexOf(userToBeDemoted.id), 1);
+            await group.save();
+            res.status(200).json({
+              message: `${userToBeDemoted.username} demoted from mod to member`,
+            });
+          }
+        }
+      } else {
+        if (!group && userToBeDemoted) {
+          // we've got a real user but the group wasn't found
+          res
+            .status(404)
+            .json({ message: `No group found with id ${groupId}` });
+        }
+        if (group && !userToBeDemoted) {
+          // we've got a real group but the user wasn't found
+          res.status(404).json({ message: `No user found with id ${userId}` });
+        }
+        if (!group && !userToBeDemoted) {
+          // neither the group or the user actually exist
+          res.status(404).json({
+            message: `No group found with id ${groupId} and no user found with id ${userId}`,
+          });
+        }
+      }
+    } catch (err) {
+      res.status(500).json({
+        message: "Error finding group and/or user",
+        error: err,
+      });
+    }
+  }),
+];
+
 // GET info for a single group
 const getGroupInfo = [
   asyncHandler(async (req, res, next) => {
@@ -130,7 +209,7 @@ const patchNewMember = [
           });
         } else if (group.banned.includes(user.id)) {
           res.status(403).json({
-            message: `User banned from joining ${group.name} group`
+            message: `User banned from joining ${group.name} group`,
           });
         } else {
           group.members.push(user.id);
@@ -194,13 +273,14 @@ const patchNewMod = [
             res.status(400).json({
               message: "Only group members can be mods",
             });
+          } else {
+            // admin = go for it
+            group.mods.push(userToBeMod.id);
+            await group.save();
+            res.status(200).json({
+              message: `${userToBeMod.username} added as mod to ${group.name} group`,
+            });
           }
-          // admin = go for it
-          group.mods.push(userToBeMod.id);
-          await group.save();
-          res.status(200).json({
-            message: `${userToBeMod.username} added as mod to ${group.name} group`,
-          });
         }
       } else {
         if (!group && userToBeMod) {
@@ -299,6 +379,7 @@ const postNewGroup = [
 ];
 
 const groupsController = {
+  deleteFromMods,
   getGroupInfo,
   getMemberGroups,
   getOwnedGroups,

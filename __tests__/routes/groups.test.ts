@@ -510,6 +510,163 @@ const groupsTests = [
       });
     });
   },
+
+  () => {
+    describe("PATCH /groups/:groupId/mods/demote/:userId", () => {
+      it("handles unauthenticated user", (done) => {
+        supertest(app)
+          .patch("/groups/123abc/mods/demote/321def")
+          .expect(401, { message: "User authentication required" }, done);
+      });
+
+      it("handles invalid group id", (done) => {
+        supertest(app)
+          .patch("/groups/badgroupid/mods/demote/baduserid")
+          .set("Cookie", cookieControl.getCookie())
+          .expect(400, { message: "Invalid group id" }, done);
+      });
+
+      it("handles nonexistant group with real user", async () => {
+        const user = await UserModel.findOne({ username: "notreason" });
+        if (!user) {
+          throw new Error("Error finding test user");
+        }
+        await supertest(app)
+          .patch(`/groups/601d0b50d91d180dd10d8f7a/mods/demote/${user.id}`)
+          .set("Cookie", cookieControl.getCookie())
+          .expect(404, {
+            message: "No group found with id 601d0b50d91d180dd10d8f7a",
+          });
+      });
+
+      it("handles invalid user with nonexistant group", (done) => {
+        supertest(app)
+          .patch("/groups/601d0b50d91d180dd10d8f7a/mods/demote/baduserid")
+          .set("Cookie", cookieControl.getCookie())
+          .expect(400, { message: "Invalid user id" }, done);
+      });
+
+      it("handles nonexistant user with real group", async () => {
+        const group = await GroupModel.findOne({ name: "general" });
+        if (!group) {
+          throw new Error("Error finding test group");
+        }
+        await supertest(app)
+          .patch(`/groups/${group.id}/mods/demote/601d0b50d91d180dd10d8f7a`)
+          .set("Cookie", cookieControl.getCookie())
+          .expect(404, {
+            message: "No user found with id 601d0b50d91d180dd10d8f7a",
+          });
+      });
+
+      it("handles valid but nonexistant group & user", (done) => {
+        supertest(app)
+          .patch(
+            "/groups/601d0b50d91d180dd10d8f7a/mods/demote/601d0b50d91d180dd10d8f7a",
+          )
+          .set("Cookie", cookieControl.getCookie())
+          .expect(
+            404,
+            {
+              message:
+                "No group found with id 601d0b50d91d180dd10d8f7a and no user found with id 601d0b50d91d180dd10d8f7a",
+            },
+            done,
+          );
+      });
+
+      it("handles non-admin making the request", async () => {
+        // need a non-admin user
+        const res = await supertest(app)
+          .post("/users/login")
+          .type("form")
+          .send({
+            username: "enemyofthestate",
+            password: "Password123#",
+          })
+          .expect("Content-Type", /json/)
+          .expect(200);
+        // save cookie for future tests that require this user's session
+        cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+        const group = await GroupModel.findOne({ name: "general" });
+        if (!group) {
+          throw new Error("Error finding test group");
+        }
+        const user = await UserModel.findOne({ username: "notreason" });
+        if (!user) {
+          throw new Error("Error finding test user");
+        }
+        await supertest(app)
+          .patch(`/groups/${group.id}/mods/demote/${user.id}`)
+          .set("Cookie", cookieControl.getCookie())
+          .expect(403, { message: "Only group admin can demote mods" });
+      });
+
+      it("successfully demotes mod to member", async () => {
+        const res = await supertest(app)
+          .post("/users/login")
+          .type("form")
+          .send({
+            // the admin of our "general" group
+            username: "praxman",
+            password: "HumanAction123$",
+          })
+          .expect("Content-Type", /json/)
+          .expect(200);
+        // save cookie for future tests that require this user's session
+        cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+        const group = await GroupModel.findOne({ name: "general" });
+        if (!group) {
+          throw new Error("Error finding test group");
+        }
+        const user = await UserModel.findOne({ username: "notreason" });
+        if (!user) {
+          throw new Error("Error finding test user");
+        }
+        await supertest(app)
+          .patch(`/groups/${group.id}/mods/demote/${user.id}`)
+          .set("Cookie", cookieControl.getCookie())
+          .expect(200, {
+            message: `${user.username} demoted from mod to member`,
+          });
+      });
+
+      it("has the correct number of mods in array", async () => {
+        const group = await GroupModel.findOne({ name: "general" });
+        if (!group) {
+          throw new Error("Error finding test group");
+        }
+        const user = await UserModel.findOne({ username: "notreason" });
+        if (!user) {
+          throw new Error("Error finding test user");
+        }
+        expect(group.mods.length).toBe(1);
+        expect(group.mods.includes(user.id)).toBeFalsy();
+      });
+
+      it("denies request if user is not a group mod", async () => {
+        const group = await GroupModel.findOne({ name: "general" });
+        if (!group) {
+          throw new Error("Error finding test group");
+        }
+        console.log(group);
+        const allUsers = await UserModel.find();
+        console.log(allUsers);
+        const user = await UserModel.findOne({ username: "notreason" });
+        if (!user) {
+          throw new Error("Error finding test user");
+        }
+        await supertest(app)
+          .patch(`/groups/${group.id}/mods/demote/${user.id}`)
+          .set("Cookie", cookieControl.getCookie())
+          .expect(400, {
+            message: "Only mods can be demoted",
+          });
+      });
+    });
+  },
 ];
 
 export default groupsTests;
