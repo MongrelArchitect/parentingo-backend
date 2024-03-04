@@ -25,6 +25,22 @@ beforeAll(async () => {
     newUser.id = newUser._id.toString();
     await newUser.save();
 
+    // add another user to test group operations
+    const userPass = await bcrypt.hash("NoAuthority68!", 10);
+    const secondUserInfo: UserInterface = {
+      email: "lysander@mises.org",
+      followers: [],
+      following: [],
+      id: "",
+      lastLogin: new Date(),
+      password: userPass,
+      name: "Lysander Spooner",
+      username: "notreason",
+    };
+    const secondUser = new UserModel(secondUserInfo);
+    secondUser.id = secondUser._id.toString();
+    await secondUser.save();
+
     // add a user that will be banned from the "general" group
     const bannedPass = await bcrypt.hash("ImBanned123#", 10);
     const bannedInfo: UserInterface = {
@@ -60,6 +76,8 @@ beforeAll(async () => {
 afterAll(async () => {
   // only if testing uri was successfully created in setup
   if (process.env.MONGO_TESTING_URI) {
+    await UserModel.deleteMany({});
+    await GroupModel.deleteMany({});
     await mongoose.disconnect();
   }
 });

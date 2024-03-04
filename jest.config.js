@@ -16,7 +16,6 @@ module.exports = {
     prefix: "<rootDir>",
   }),
   testPathIgnorePatterns: [
-    "<rootDir>/__tests__/routes",
     "<rootDir>/__tests__/config",
     "<rootDir>/node_modules",
   ],
