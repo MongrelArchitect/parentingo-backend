@@ -1,12 +1,13 @@
+import { NextFunction, Response } from "express";
 import asyncHandler from "express-async-handler";
 import { body, matchedData, validationResult } from "express-validator";
-import { Document, isValidObjectId } from "mongoose";
+import { Document } from "mongoose";
 
+import CustomRequest from "@interfaces/CustomRequest";
 import GroupInterface, { GroupList } from "@interfaces/Groups";
 import UserInterface from "@interfaces/Users";
 
 import GroupModel from "@models/group";
-import UserModel from "@models/user";
 
 function makeGroupList(groups: Document[]): GroupList {
   // could just return the raw array, but i want it a bit cleaner...
@@ -29,114 +30,66 @@ function makeGroupList(groups: Document[]): GroupList {
 }
 
 // PATCH to demote a user from mod to regular member
-const deleteFromMods = [
-  // first check valid group id
-  asyncHandler(async (req, res, next) => {
-    const { groupId } = req.params;
-    if (isValidObjectId(groupId)) {
-      next();
-    } else {
-      res.status(400).json({ message: "Invalid group id" });
-    }
-  }),
-
-  // then check valid user id
-  asyncHandler(async (req, res, next) => {
-    const { userId } = req.params;
-    if (isValidObjectId(userId)) {
-      next();
-    } else {
-      res.status(400).json({ message: "Invalid user id" });
-    }
-  }),
-
-  asyncHandler(async (req, res) => {
-    // XXX
-    // this is full of confusing control flow...better way to break it up
-    // without making multiple database queries?
+const deleteFromMods = async (req: CustomRequest, res: Response) => {
+  const { group, userDocument } = req;
+  if (!group || !userDocument) {
+    // this shouldn't happen since our prior middleware checks for it,
+    // but just in case & to keep typescript happy
+    throw new Error("Error getting group or user info from database");
+  } else {
     try {
-      // we've got valid group & user ids, try and find 'em
-      const { groupId, userId } = req.params;
-      const group = await GroupModel.findById(groupId);
-      const userToBeDemoted = await UserModel.findById(userId);
-      if (group && userToBeDemoted) {
-        // found 'em both, time to see if it's the admin making the request
-        const authUser = req.user as UserInterface;
-        if (group.admin !== authUser.id) {
-          // not admin = no go
-          res.status(403).json({ message: "Only group admin can demote mods" });
-        } else {
-          if (!group.mods.includes(userToBeDemoted.id)) {
-            // only group members can be mods
-            res.status(400).json({
-              message: "Only mods can be demoted",
-            });
-          } else {
-            // admin = go for it
-            group.mods.splice(group.mods.indexOf(userToBeDemoted.id), 1);
-            await group.save();
-            res.status(200).json({
-              message: `${userToBeDemoted.username} demoted from mod to member`,
-            });
-          }
-        }
+      // found 'em both, time to see if it's the admin making the request
+      const authUser = req.user as UserInterface;
+      if (group.admin !== authUser.id) {
+        // not admin = no go
+        res.status(403).json({ message: "Only group admin can demote mods" });
       } else {
-        if (!group && userToBeDemoted) {
-          // we've got a real user but the group wasn't found
-          res
-            .status(404)
-            .json({ message: `No group found with id ${groupId}` });
-        }
-        if (group && !userToBeDemoted) {
-          // we've got a real group but the user wasn't found
-          res.status(404).json({ message: `No user found with id ${userId}` });
-        }
-        if (!group && !userToBeDemoted) {
-          // neither the group or the user actually exist
-          res.status(404).json({
-            message: `No group found with id ${groupId} and no user found with id ${userId}`,
+        if (!group.mods.includes(userDocument.id)) {
+          // only group members can be mods
+          res.status(400).json({
+            message: "Only mods can be demoted",
+          });
+        } else {
+          // admin = go for it
+          group.mods.splice(group.mods.indexOf(userDocument.id), 1);
+          await group.save();
+          res.status(200).json({
+            message: `${userDocument.username} demoted from mod to member`,
           });
         }
       }
     } catch (err) {
       res.status(500).json({
-        message: "Error finding group and/or user",
+        message: "Error demoting user from mod to regular member",
         error: err,
       });
     }
-  }),
-];
+  }
+};
 
 // GET info for a single group
-const getGroupInfo = [
-  asyncHandler(async (req, res, next) => {
-    const { groupId } = req.params;
-    if (isValidObjectId(groupId)) {
-      next();
-    } else {
-      res.status(400).json({ message: "Invalid group id" });
-    }
-  }),
-
-  asyncHandler(async (req, res) => {
-    const { groupId } = req.params;
-    const groupInfo = await GroupModel.findById(groupId);
-    if (!groupInfo) {
-      res.status(404).json({ message: `No group found with id ${groupId}` });
-    } else {
-      const group: GroupInterface = {
-        name: groupInfo.name,
-        description: groupInfo.description,
-        admin: groupInfo.admin,
-        mods: groupInfo.mods,
-        members: groupInfo.members,
-        id: groupInfo.id,
-        banned: groupInfo.banned,
-      };
-      res.status(200).json({ message: "Group found", group });
-    }
-  }),
-];
+const getGroupInfo = (
+  req: CustomRequest,
+  res: Response,
+) => {
+  const { group } = req;
+  if (!group) {
+    // this shouldn't happen since our prior middleware checks for it,
+    // but just in case & to keep typescript happy
+    throw new Error("Error getting group info from database");
+  } else {
+    const groupInfo: GroupInterface = {
+      name: group.name,
+      description: group.description,
+      id: group.id,
+      admin: group.admin,
+      mods: group.mods,
+      members: group.members,
+      banned: group.banned,
+    };
+    res.status(200).json({ message: "Group found", group: groupInfo });
+  }
+};
 
 // GET all groups that an authenticated user is a member of
 const getMemberGroups = [
@@ -184,130 +137,88 @@ const getOwnedGroups = [
   }),
 ];
 
-// PATCH to add a new member to an existing group
-const patchNewMember = [
-  asyncHandler(async (req, res, next) => {
-    const { groupId } = req.params;
-    if (isValidObjectId(groupId)) {
-      next();
-    } else {
-      res.status(400).json({ message: "Invalid group id" });
-    }
-  }),
-
+// PATCH for a user to remove themselves from group membership
+// XXX
+const patchLeaveGroup = [
   asyncHandler(async (req, res) => {
-    const { groupId } = req.params;
-    const group = await GroupModel.findById(groupId);
-    if (!group) {
-      res.status(404).json({ message: `No group found with id "${groupId}"` });
-    } else {
-      try {
-        const user = req.user as UserInterface;
-        if (group.members.includes(user.id)) {
-          res.status(400).json({
-            message: `User already member of "${group.name}" group`,
-          });
-        } else if (group.banned.includes(user.id)) {
-          res.status(403).json({
-            message: `User banned from joining ${group.name} group`,
-          });
-        } else {
-          group.members.push(user.id);
-          await group.save();
-          res.status(200).json({
-            message: `User added to "${group.name}" group`,
-          });
-        }
-      } catch (err) {
-        res.status(500).json({
-          message: "Error adding user to group",
-          error: err,
-        });
-      }
-    }
+    res.status(200).json({});
   }),
 ];
 
-// PATCH to add a new mod to an existing group
-const patchNewMod = [
-  // first check valid group id
-  asyncHandler(async (req, res, next) => {
-    const { groupId } = req.params;
-    if (isValidObjectId(groupId)) {
-      next();
-    } else {
-      res.status(400).json({ message: "Invalid group id" });
-    }
-  }),
-
-  // then check valid user id
-  asyncHandler(async (req, res, next) => {
-    const { userId } = req.params;
-    if (isValidObjectId(userId)) {
-      next();
-    } else {
-      res.status(400).json({ message: "Invalid user id" });
-    }
-  }),
-
-  asyncHandler(async (req, res) => {
-    // XXX
-    // this is full of confusing control flow...better way to break it up
-    // without making multiple database queries?
+// PATCH to add a new member to an existing group
+const patchNewMember = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  const { group } = req;
+  if (!group) {
+    // this shouldn't happen since our prior middleware checks for it,
+    // but just in case & to keep typescript happy
+    throw new Error("Error getting group info from database");
+  } else {
     try {
-      // we've got valid group & user ids, try and find 'em
-      const { groupId, userId } = req.params;
-      const group = await GroupModel.findById(groupId);
-      const userToBeMod = await UserModel.findById(userId);
-      if (group && userToBeMod) {
-        // found 'em both, time to see if it's the admin making the request
-        const authUser = req.user as UserInterface;
-        if (group.admin !== authUser.id) {
-          // not admin = no go
-          res
-            .status(403)
-            .json({ message: "Only group admin can designate mods" });
-        } else {
-          if (!group.members.includes(userToBeMod.id)) {
-            // only group members can be mods
-            res.status(400).json({
-              message: "Only group members can be mods",
-            });
-          } else {
-            // admin = go for it
-            group.mods.push(userToBeMod.id);
-            await group.save();
-            res.status(200).json({
-              message: `${userToBeMod.username} added as mod to ${group.name} group`,
-            });
-          }
-        }
+      const user = req.user as UserInterface;
+      if (group.members.includes(user.id)) {
+        res.status(400).json({
+          message: `User already member of "${group.name}" group`,
+        });
+      } else if (group.banned.includes(user.id)) {
+        res.status(403).json({
+          message: `User banned from joining ${group.name} group`,
+        });
       } else {
-        if (!group && userToBeMod) {
-          // we've got a real user but the group wasn't found
-          res
-            .status(404)
-            .json({ message: `No group found with id ${groupId}` });
-        }
-        if (group && !userToBeMod) {
-          // we've got a real group but the user wasn't found
-          res.status(404).json({ message: `No user found with id ${userId}` });
-        }
-        if (!group && !userToBeMod) {
-          // neither the group or the user actually exist
-          res.status(404).json({
-            message: `No group found with id ${groupId} and no user found with id ${userId}`,
-          });
-        }
+        group.members.push(user.id);
+        await group.save();
+        res.status(200).json({
+          message: `User added to "${group.name}" group`,
+        });
       }
     } catch (err) {
       res.status(500).json({
-        message: "Error finding group and/or user",
+        message: "Error adding user to group",
         error: err,
       });
     }
-  }),
-];
+  }
+};
+
+// PATCH to add a new mod to an existing group
+const patchNewMod = async (req: CustomRequest, res: Response) => {
+  const { group, userDocument } = req;
+  if (!group || !userDocument) {
+    // this shouldn't happen since our prior middleware checks for it,
+    // but just in case & to keep typescript happy
+    throw new Error("Error getting group or user info from database");
+  } else {
+    try {
+      const authUser = req.user as UserInterface;
+      if (group.admin !== authUser.id) {
+        // not admin = no go
+        res
+          .status(403)
+          .json({ message: "Only group admin can designate mods" });
+      } else if (!group.members.includes(userDocument.id)) {
+        // only group members can be mods
+        res.status(400).json({
+          message: "Only group members can be mods",
+        });
+      } else {
+        // admin = go for it
+        group.mods.push(userDocument.id);
+        await group.save();
+        res.status(200).json({
+          message: `${userDocument.username} added as mod to ${group.name} group`,
+        });
+      }
+    } catch (err) {
+      res.status(500).json({
+        message: "Error promoting user to mod",
+        error: err,
+      });
+    }
+  }
+};
 
 // POST to create a new group with currently authenticated user as admin / owner
 const postNewGroup = [
@@ -383,6 +294,7 @@ const groupsController = {
   getGroupInfo,
   getMemberGroups,
   getOwnedGroups,
+  patchLeaveGroup,
   patchNewMember,
   patchNewMod,
   postNewGroup,

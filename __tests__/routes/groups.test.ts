@@ -249,7 +249,7 @@ describe("PATCH /groups/:groupId/members", () => {
       .set("Cookie", cookieControl.getCookie())
       .expect(
         404,
-        { message: 'No group found with id "601d0b50d91d180dd10d8f7a"' },
+        { message: "No group found with id 601d0b50d91d180dd10d8f7a" },
         done,
       );
   });
@@ -389,7 +389,7 @@ describe("PATCH /groups/:groupId/mods/:userId", () => {
       .expect(400, { message: "Invalid group id" }, done);
   });
 
-  it("handles nonexistant group with real user", async () => {
+  it("handles nonexistant group", async () => {
     const user = await UserModel.findOne({ username: "notreason" });
     if (!user) {
       throw new Error("Error finding test user");
@@ -400,13 +400,6 @@ describe("PATCH /groups/:groupId/mods/:userId", () => {
       .expect(404, {
         message: "No group found with id 601d0b50d91d180dd10d8f7a",
       });
-  });
-
-  it("handles invalid user with nonexistant group", (done) => {
-    supertest(app)
-      .patch("/groups/601d0b50d91d180dd10d8f7a/mods/baduserid")
-      .set("Cookie", cookieControl.getCookie())
-      .expect(400, { message: "Invalid user id" }, done);
   });
 
   it("handles nonexistant user with real group", async () => {
@@ -420,20 +413,6 @@ describe("PATCH /groups/:groupId/mods/:userId", () => {
       .expect(404, {
         message: "No user found with id 601d0b50d91d180dd10d8f7a",
       });
-  });
-
-  it("handles valid but nonexistant group & user", (done) => {
-    supertest(app)
-      .patch("/groups/601d0b50d91d180dd10d8f7a/mods/601d0b50d91d180dd10d8f7a")
-      .set("Cookie", cookieControl.getCookie())
-      .expect(
-        404,
-        {
-          message:
-            "No group found with id 601d0b50d91d180dd10d8f7a and no user found with id 601d0b50d91d180dd10d8f7a",
-        },
-        done,
-      );
   });
 
   it("handles non-admin making the request", async () => {
@@ -526,7 +505,7 @@ describe("PATCH /groups/:groupId/mods/demote/:userId", () => {
       .expect(400, { message: "Invalid group id" }, done);
   });
 
-  it("handles nonexistant group with real user", async () => {
+  it("handles nonexistant group", async () => {
     const user = await UserModel.findOne({ username: "notreason" });
     if (!user) {
       throw new Error("Error finding test user");
@@ -537,13 +516,6 @@ describe("PATCH /groups/:groupId/mods/demote/:userId", () => {
       .expect(404, {
         message: "No group found with id 601d0b50d91d180dd10d8f7a",
       });
-  });
-
-  it("handles invalid user with nonexistant group", (done) => {
-    supertest(app)
-      .patch("/groups/601d0b50d91d180dd10d8f7a/mods/demote/baduserid")
-      .set("Cookie", cookieControl.getCookie())
-      .expect(400, { message: "Invalid user id" }, done);
   });
 
   it("handles nonexistant user with real group", async () => {
@@ -557,22 +529,6 @@ describe("PATCH /groups/:groupId/mods/demote/:userId", () => {
       .expect(404, {
         message: "No user found with id 601d0b50d91d180dd10d8f7a",
       });
-  });
-
-  it("handles valid but nonexistant group & user", (done) => {
-    supertest(app)
-      .patch(
-        "/groups/601d0b50d91d180dd10d8f7a/mods/demote/601d0b50d91d180dd10d8f7a",
-      )
-      .set("Cookie", cookieControl.getCookie())
-      .expect(
-        404,
-        {
-          message:
-            "No group found with id 601d0b50d91d180dd10d8f7a and no user found with id 601d0b50d91d180dd10d8f7a",
-        },
-        done,
-      );
   });
 
   it("handles non-admin making the request", async () => {
@@ -661,5 +617,32 @@ describe("PATCH /groups/:groupId/mods/demote/:userId", () => {
       .expect(400, {
         message: "Only mods can be demoted",
       });
+  });
+});
+
+describe("PATCH /groups/:groupId/leave", () => {
+  // XXX
+  it("handles unauthenticated user", (done) => {
+    supertest(app)
+      .patch("/groups/somebadid/leave")
+      .expect(401, { message: "User authentication required" }, done);
+  });
+
+  it("handles invalid group id", (done) => {
+    supertest(app)
+      .patch("/groups/badid123/leave")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, { message: "Invalid group id" }, done);
+  });
+
+  it("handles valid but nonexistant group id", (done) => {
+    supertest(app)
+      .patch("/groups/601d0b50d91d180dd10d8f7a/leave")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(
+        404,
+        { message: "No group found with id 601d0b50d91d180dd10d8f7a" },
+        done,
+      );
   });
 });

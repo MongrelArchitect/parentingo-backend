@@ -3,6 +3,8 @@ import { Router } from "express";
 import groupsController from "@controllers/groupsController";
 
 import auth from "@middleware/auth";
+import group from "@middleware/groups";
+import user from "@middleware/users";
 
 const groupsRoutes = Router();
 
@@ -24,6 +26,8 @@ groupsRoutes.get(
 groupsRoutes.get(
   "/:groupId",
   auth.isAuthenticated,
+  group.isValidGroupId,
+  group.exists,
   groupsController.getGroupInfo,
 );
 
@@ -34,6 +38,8 @@ groupsRoutes.post("/", auth.isAuthenticated, groupsController.postNewGroup);
 groupsRoutes.patch(
   "/:groupId/members",
   auth.isAuthenticated,
+  group.isValidGroupId,
+  group.exists,
   groupsController.patchNewMember,
 );
 
@@ -41,6 +47,10 @@ groupsRoutes.patch(
 groupsRoutes.patch(
   "/:groupId/mods/:userId",
   auth.isAuthenticated,
+  group.isValidGroupId,
+  group.exists,
+  user.isValidUserId,
+  user.exists,
   groupsController.patchNewMod,
 );
 
@@ -48,13 +58,24 @@ groupsRoutes.patch(
 groupsRoutes.patch(
   "/:groupId/mods/demote/:userId",
   auth.isAuthenticated,
+  group.isValidGroupId,
+  group.exists,
+  user.isValidUserId,
+  user.exists,
   groupsController.deleteFromMods,
 );
 
-// PATCH to remove a user from group membership
+// PATCH for a user to remove themselves from group membership
 // XXX
+groupsRoutes.patch(
+  "/:groupId/leave",
+  auth.isAuthenticated,
+  group.isValidGroupId,
+  group.exists,
+  groupsController.patchLeaveGroup,
+);
 
-// PATCH to ban a user from joining a group
+// PATCH for an admin to remove a member & ban them from joining the group
 // XXX
 
 export default groupsRoutes;
