@@ -1,14 +1,16 @@
 import bcrypt from "bcrypt";
+import { NextFunction, Response } from "express";
 import asyncHandler from "express-async-handler";
 import { body, matchedData, validationResult } from "express-validator";
 import passport from "passport";
 
+import CustomRequest from "@interfaces/CustomRequest";
 import UserInterface from "@interfaces/Users";
 import UserModel from "@models/user";
 
 // POST to create a new user
 const createNewUser = [
-  asyncHandler(async (req, res, next) => {
+  (req: CustomRequest, res: Response, next: NextFunction) => {
     // already authenticated with active session, can't make new user
     if (req.isAuthenticated()) {
       res.status(400).json({
@@ -18,7 +20,7 @@ const createNewUser = [
     } else {
       next();
     }
-  }),
+  },
 
   body("email")
     .trim()
@@ -71,7 +73,7 @@ const createNewUser = [
     .isLength({ max: 255 })
     .withMessage("Name cannot be more than 255 characters"),
 
-  asyncHandler(async (req, res, next) => {
+  (req: CustomRequest, res: Response, next: NextFunction) => {
     const validationErrors = validationResult(req);
     if (!validationErrors.isEmpty()) {
       res.status(400).json({
@@ -81,7 +83,7 @@ const createNewUser = [
     } else {
       next();
     }
-  }),
+  },
 
   asyncHandler(async (req, res, next) => {
     const data = matchedData(req);
@@ -116,21 +118,27 @@ const createNewUser = [
 
   passport.authenticate("local"),
 
-  asyncHandler(async (req, res, next) => {
-    if (req.user) {
+  asyncHandler(async (req, res) => {
+    const { user } = req;
+    if (!user) {
+      throw new Error("Error deserializing authenticated user's info");
+    } else {
       res.status(201).json({
         message: "User created",
-        user: req.user,
+        user,
       });
-    } else {
-      next();
     }
   }),
 ];
 
 // GET the currerntly authenticated user's deserialized info
 const getCurrentUser = asyncHandler(async (req, res) => {
-  res.status(200).json(req.user);
+  const { user } = req;
+  if (!user) {
+    throw new Error("Error deserializing authenticated user's info");
+  } else {
+    res.status(200).json(user);
+  }
 });
 
 // POST to login a user
@@ -139,7 +147,7 @@ const loginUser = [
 
   body("password").notEmpty().withMessage("Password required"),
 
-  asyncHandler(async (req, res, next) => {
+  (req: CustomRequest, res: Response, next: NextFunction) => {
     const validationErrors = validationResult(req);
     if (!validationErrors.isEmpty()) {
       res.status(400).json({
@@ -149,9 +157,9 @@ const loginUser = [
     } else {
       next();
     }
-  }),
+  },
 
-  asyncHandler(async (req, res, next) => {
+  (req: CustomRequest, res: Response, next: NextFunction) => {
     if (req.isAuthenticated()) {
       res.status(403).json({
         message: "User already authenticated",
@@ -159,28 +167,35 @@ const loginUser = [
     } else {
       next();
     }
-  }),
+  },
 
   passport.authenticate("local", { failWithError: true }),
 
   asyncHandler(async (req, res) => {
-    res.status(200).json({ message: "Login successful", id: req.user });
+    const { user } = req;
+    if (!user) {
+      throw new Error("Error deserializing authenticated user's info");
+    } else {
+      res.status(200).json({ message: "Login successful", id: user });
+    }
   }),
 ];
- 
+
 // POST to logout a user, clear cookies & delete session from database
-const logoutUser = asyncHandler(async (req, res, next) => {
+const logoutUser = asyncHandler(async (req, res) => {
   res.clearCookie("connect.sid");
   req.logout((err) => {
     if (err) {
-      next(err);
+      throw new Error("Error logging out");
+    } else {
+      req.session.destroy((err) => {
+        if (err) {
+          throw new Error("Error destroying session");
+        } else {
+          res.status(200).json({ message: "User logged out" });
+        }
+      });
     }
-    req.session.destroy((err) => {
-      if (err) {
-        next(err);
-      }
-      res.status(200).json({ message: "User logged out" });
-    });
   });
 });
 
