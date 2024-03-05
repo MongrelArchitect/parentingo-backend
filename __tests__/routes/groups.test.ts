@@ -25,7 +25,6 @@ describe("GET /groups/owned", () => {
       .post("/users/login")
       .type("form")
       .send({
-        // user from setup file that owns the "general" group
         username: "notreason",
         password: "NoAuthority68!",
       })
@@ -260,7 +259,6 @@ describe("PATCH /groups/:groupId/members", () => {
       .post("/users/login")
       .type("form")
       .send({
-        // user from setup file that owns the "general" group
         username: "notreason",
         password: "NoAuthority68!",
       })
@@ -644,5 +642,180 @@ describe("PATCH /groups/:groupId/leave", () => {
         { message: "No group found with id 601d0b50d91d180dd10d8f7a" },
         done,
       );
+  });
+
+  it("removes user from group membership", async () => {
+    const group = await GroupModel.findOne({name:"general"});
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "notreason",
+        password: "NoAuthority68!",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+    await supertest(app)
+      .patch(`/groups/${group.id}/leave`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(
+        200,
+        { message: `User has left ${group.name} group` }
+      );
+  });
+
+  it("group contains correct members", async () => {
+    const group = await GroupModel.findOne({name:"general"});
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const user = await UserModel.findOne({username:"notreason"});
+    if (!user) {
+      throw new Error("Error finding test user");
+    }
+    expect(group.members.length).toBe(1);
+    expect(group.members.includes(user.id)).toBeFalsy();
+  });
+
+  it("handles attempt with non member", async () => {
+    const group = await GroupModel.findOne({name:"general"});
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "imbanned",
+        password: "ImBanned123#",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+    await supertest(app)
+      .patch(`/groups/${group.id}/leave`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(
+        403,
+        { message: `User is not a member of ${group.name} group` }
+      );
+  });
+
+  it("prevents admin from leaving group", async () => {
+    const group = await GroupModel.findOne({name:"general"});
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "praxman",
+        password: "HumanAction123$",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+    await supertest(app)
+      .patch(`/groups/${group.id}/leave`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(
+        403,
+        { message: "Admin cannot leave group" }
+      );
+  });
+
+  it("handles mod leaving", async () => {
+    const group = await GroupModel.findOne({name:"general"});
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const userToAdd = await UserModel.findOne({username:"notreason"});
+    if (!userToAdd) {
+      throw new Error("Error finding test user");
+    }
+
+    // first sign in as a user not part of the group
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "notreason",
+        password: "NoAuthority68!",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+    // have the user join the group
+    await supertest(app)
+      .patch(`/groups/${group.id}/members`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(200);
+
+    // now sign in as group admin
+    const resTwo = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "praxman",
+        password: "HumanAction123$",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(resTwo.headers["set-cookie"][0].split(";")[0]);
+
+    // add the new user as a mod
+    await supertest(app)
+      .patch(`/groups/${group.id}/mods/${userToAdd.id}`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(200);
+
+    // sign back in as the new mod
+    const resThree = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "notreason",
+        password: "NoAuthority68!",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(resThree.headers["set-cookie"][0].split(";")[0]);
+
+    // now try to leave the group
+    await supertest(app)
+      .patch(`/groups/${group.id}/leave`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(
+        200,
+        { message: `Mod has left ${group.name} group` }
+      );
+  });
+
+  it("group contains correct mods", async () => {
+    const group = await GroupModel.findOne({name:"general"});
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const user = await UserModel.findOne({username:"notreason"});
+    if (!user) {
+      throw new Error("Error finding test user");
+    }
+    expect(group.mods.length).toBe(1);
+    expect(group.mods.includes(user.id)).toBeFalsy();
   });
 });
