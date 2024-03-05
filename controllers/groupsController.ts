@@ -32,15 +32,19 @@ function makeGroupList(groups: Document[]): GroupList {
 // PATCH to demote a user from mod to regular member
 const deleteFromMods = asyncHandler(
   async (req: CustomRequest, res: Response) => {
-    const { group, userDocument } = req;
-    if (!group || !userDocument) {
-      // this shouldn't happen since our prior middleware checks for it,
-      // but just in case & to keep typescript happy
-      throw new Error("Error getting group or user info from database");
+    // "user" is the currently authenticated user
+    // "userDocument" is the mongoose document of the user we're demoting
+    const { group, user, userDocument } = req;
+    if (!group) {
+      throw new Error("Error getting group info from database");
+    } else if (!userDocument){
+      throw new Error("Error getting mod's info from database");
+    } else if (!user) {
+      throw new Error("Error deserializing authenticated user's info");
     } else {
       try {
-        // found 'em both, time to see if it's the admin making the request
-        const authUser = req.user as UserInterface;
+        // time to see if it's the admin making the request
+        const authUser = user as UserInterface;
         if (group.admin !== authUser.id) {
           // not admin = no go
           res.status(403).json({ message: "Only group admin can demote mods" });
@@ -93,9 +97,13 @@ const getGroupInfo = asyncHandler(async (req: CustomRequest, res: Response) => {
 // GET all groups that an authenticated user is a member of
 const getMemberGroups = [
   asyncHandler(async (req, res) => {
+    const { user } = req;
+    if (!user) {
+      throw new Error("Error deserializing authenticated user's info");
+    } else {
     try {
-      const user = req.user as UserInterface;
-      const groups = await GroupModel.find({ members: user.id });
+      const userInfo = user as UserInterface;
+      const groups = await GroupModel.find({ members: userInfo.id });
       if (!groups.length) {
         res.status(200).json({ message: "Not a member of any groups" });
       } else {
@@ -110,15 +118,20 @@ const getMemberGroups = [
         error: err,
       });
     }
+    }
   }),
 ];
 
 // GET all groups that an authenticated user owns / is admin of
 const getOwnedGroups = [
   asyncHandler(async (req, res) => {
+    const { user } = req;
+    if (!user) {
+      throw new Error("Error deserializing authenticated user's info");
+    } else {
     try {
-      const user = req.user as UserInterface;
-      const groups = await GroupModel.find({ admin: user.id });
+      const userInfo = user as UserInterface;
+      const groups = await GroupModel.find({ admin: userInfo.id });
       if (!groups.length) {
         res.status(200).json({ message: "No owned groups found" });
       } else {
@@ -133,26 +146,24 @@ const getOwnedGroups = [
         error: err,
       });
     }
+    }
   }),
 ];
 
 // PATCH for a user to remove themselves from group membership
-// XXX
 const patchLeaveGroup = asyncHandler(
   async (req: CustomRequest, res: Response) => {
     const { group, user } = req;
     if (!group) {
       throw new Error("Error getting group info from database");
     } else if (!user) {
-      throw new Error("Error deserializing user info");
+      throw new Error("Error deserializing authenticated user's info");
     } else {
       try {
         const userInfo = user as UserInterface;
         if (group.admin === userInfo.id) {
           // admin can't leave group...don't forget, you're here forever!
-          res
-            .status(403)
-            .json({ message: "Admin cannot leave group" });
+          res.status(403).json({ message: "Admin cannot leave group" });
         } else if (!group.members.includes(userInfo.id)) {
           // user has to be a member of the group in order to leave it
           res
@@ -185,24 +196,24 @@ const patchLeaveGroup = asyncHandler(
 // PATCH to add a new member to an existing group
 const patchNewMember = asyncHandler(
   async (req: CustomRequest, res: Response) => {
-    const { group } = req;
+    const { group, user } = req;
     if (!group) {
-      // this shouldn't happen since our prior middleware checks for it,
-      // but just in case & to keep typescript happy
       throw new Error("Error getting group info from database");
+    } else if (!user) {
+      throw new Error("Error deserializing authenticated user's info");
     } else {
       try {
-        const user = req.user as UserInterface;
-        if (group.members.includes(user.id)) {
+        const userInfo = user as UserInterface;
+        if (group.members.includes(userInfo.id)) {
           res.status(400).json({
             message: `User already member of "${group.name}" group`,
           });
-        } else if (group.banned.includes(user.id)) {
+        } else if (group.banned.includes(userInfo.id)) {
           res.status(403).json({
             message: `User banned from joining ${group.name} group`,
           });
         } else {
-          group.members.push(user.id);
+          group.members.push(userInfo.id);
           await group.save();
           res.status(200).json({
             message: `User added to "${group.name}" group`,
@@ -220,14 +231,18 @@ const patchNewMember = asyncHandler(
 
 // PATCH to add a new mod to an existing group
 const patchNewMod = asyncHandler(async (req: CustomRequest, res: Response) => {
-  const { group, userDocument } = req;
-  if (!group || !userDocument) {
-    // this shouldn't happen since our prior middleware checks for it,
-    // but just in case & to keep typescript happy
-    throw new Error("Error getting group or user info from database");
+  // "user" is the currently authenticated user
+  // "userDocument" is the mongoose document for the user we're trying to add
+  const { group, user, userDocument } = req;
+  if (!group) {
+    throw new Error("Error getting group info from database");
+  } else if (!userDocument) {
+    throw new Error("Error getting new mod user's info from database");
+  } else if (!user) {
+    throw new Error("Error deserializing authenticated user's info");
   } else {
     try {
-      const authUser = req.user as UserInterface;
+      const authUser = user as UserInterface;
       if (group.admin !== authUser.id) {
         // not admin = no go
         res
@@ -280,7 +295,7 @@ const postNewGroup = [
     .isLength({ max: 255 })
     .withMessage("Description cannot be more than 255 characters"),
 
-  asyncHandler(async (req, res, next) => {
+  (req: CustomRequest, res: Response, next: NextFunction) => {
     const validationErrors = validationResult(req);
     if (!validationErrors.isEmpty()) {
       res.status(400).json({
@@ -290,19 +305,22 @@ const postNewGroup = [
     } else {
       next();
     }
-  }),
+  },
 
-  asyncHandler(async (req, res, next) => {
-    if (req.user) {
+  asyncHandler(async (req, res) => {
+    const { user } = req;
+    if (!user) {
+      throw new Error("Error deserializing authenticated user's info");
+    } else {
       const data = matchedData(req);
       try {
-        const user = req.user as UserInterface;
+        const userInfo = user as UserInterface;
         const groupInfo: GroupInterface = {
-          admin: user.id, // user who creates the group is the admin
+          admin: userInfo.id, // user who creates the group is the admin
           name: data.name,
           description: data.description,
-          mods: [user.id], // admin is also a mod
-          members: [user.id], // admins and mods are also members
+          mods: [userInfo.id], // admin is also a mod
+          members: [userInfo.id], // admins and mods are also members
           id: "",
           banned: [],
         };
@@ -318,8 +336,6 @@ const postNewGroup = [
           error: err,
         });
       }
-    } else {
-      next();
     }
   }),
 ];
