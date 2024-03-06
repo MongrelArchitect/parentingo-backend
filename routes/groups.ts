@@ -66,7 +66,6 @@ groupsRoutes.patch(
 );
 
 // PATCH for a user to remove themselves from group membership
-// XXX
 groupsRoutes.patch(
   "/:groupId/leave",
   auth.isAuthenticated,
@@ -75,7 +74,19 @@ groupsRoutes.patch(
   groupsController.patchLeaveGroup,
 );
 
-// PATCH for an admin to remove a member & ban them from joining the group
+// PATCH for an admin to remove a user & ban them from joining the group
+// XXX
+groupsRoutes.patch(
+  "/:groupId/ban/:userId",
+  auth.isAuthenticated,
+  group.isValidGroupId,
+  group.exists,
+  user.isValidUserId,
+  user.exists,
+  groupsController.patchBanUser,
+);
+
+// PATCH for an admin to unban a previously banned user
 // XXX
 
 export default groupsRoutes;

@@ -37,7 +37,7 @@ const deleteFromMods = asyncHandler(
     const { group, user, userDocument } = req;
     if (!group) {
       throw new Error("Error getting group info from database");
-    } else if (!userDocument){
+    } else if (!userDocument) {
       throw new Error("Error getting mod's info from database");
     } else if (!user) {
       throw new Error("Error deserializing authenticated user's info");
@@ -101,23 +101,23 @@ const getMemberGroups = [
     if (!user) {
       throw new Error("Error deserializing authenticated user's info");
     } else {
-    try {
-      const userInfo = user as UserInterface;
-      const groups = await GroupModel.find({ members: userInfo.id });
-      if (!groups.length) {
-        res.status(200).json({ message: "Not a member of any groups" });
-      } else {
-        res.status(200).json({
-          message: `User is a member of ${groups.length} group${groups.length === 1 ? "" : "s"}`,
-          groups: makeGroupList(groups),
+      try {
+        const userInfo = user as UserInterface;
+        const groups = await GroupModel.find({ members: userInfo.id });
+        if (!groups.length) {
+          res.status(200).json({ message: "Not a member of any groups" });
+        } else {
+          res.status(200).json({
+            message: `User is a member of ${groups.length} group${groups.length === 1 ? "" : "s"}`,
+            groups: makeGroupList(groups),
+          });
+        }
+      } catch (err) {
+        res.status(500).json({
+          message: "Error finding groups",
+          error: err,
         });
       }
-    } catch (err) {
-      res.status(500).json({
-        message: "Error finding groups",
-        error: err,
-      });
-    }
     }
   }),
 ];
@@ -129,26 +129,72 @@ const getOwnedGroups = [
     if (!user) {
       throw new Error("Error deserializing authenticated user's info");
     } else {
+      try {
+        const userInfo = user as UserInterface;
+        const groups = await GroupModel.find({ admin: userInfo.id });
+        if (!groups.length) {
+          res.status(200).json({ message: "No owned groups found" });
+        } else {
+          res.status(200).json({
+            message: `User owns ${groups.length} group${groups.length === 1 ? "" : "s"}`,
+            groups: makeGroupList(groups),
+          });
+        }
+      } catch (err) {
+        res.status(500).json({
+          message: "Error finding owned groups",
+          error: err,
+        });
+      }
+    }
+  }),
+];
+
+// PATCH to remove a user from the group & ban them from joining again
+const patchBanUser = asyncHandler(async (req: CustomRequest, res: Response) => {
+  // "user" is the currently authenticated user
+  // "userDocument" is the mongoose document of the user we're banning
+  const { group, user, userDocument } = req;
+  if (!group) {
+    throw new Error("Error getting group info from database");
+  } else if (!userDocument) {
+    throw new Error("Error getting mod's info from database");
+  } else if (!user) {
+    throw new Error("Error deserializing authenticated user's info");
+  } else {
     try {
-      const userInfo = user as UserInterface;
-      const groups = await GroupModel.find({ admin: userInfo.id });
-      if (!groups.length) {
-        res.status(200).json({ message: "No owned groups found" });
+      const authUser = user as UserInterface;
+      if (group.admin !== authUser.id) {
+        // not admin = no go
+        res.status(403).json({ message: "Only group admin can ban users" });
+      } else if (!group.members.includes(userDocument.id)) {
+        // only group members can be banned
+        res.status(400).json({
+          message: "Only group members can be banned",
+        });
+      } else if (authUser.id === userDocument.id) {
+        // admin can't ban themselves
+        res.status(403).json({ message: "Admin cannot ban themselves" });
       } else {
+        // admin = go for it
+        group.members.splice(group.members.indexOf(userDocument.id), 1);
+        group.banned.push(userDocument.id);
+        if (group.mods.includes(userDocument.id)) {
+          group.mods.splice(group.mods.indexOf(userDocument.id), 1);
+        }
+        await group.save();
         res.status(200).json({
-          message: `User owns ${groups.length} group${groups.length === 1 ? "" : "s"}`,
-          groups: makeGroupList(groups),
+          message: `${userDocument.username} removed and banned from ${group.name} group`,
         });
       }
     } catch (err) {
       res.status(500).json({
-        message: "Error finding owned groups",
+        message: "Error banning user",
         error: err,
       });
     }
-    }
-  }),
-];
+  }
+});
 
 // PATCH for a user to remove themselves from group membership
 const patchLeaveGroup = asyncHandler(
@@ -345,6 +391,7 @@ const groupsController = {
   getGroupInfo,
   getMemberGroups,
   getOwnedGroups,
+  patchBanUser,
   patchLeaveGroup,
   patchNewMember,
   patchNewMod,
