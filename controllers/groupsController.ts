@@ -158,7 +158,7 @@ const patchBanUser = asyncHandler(async (req: CustomRequest, res: Response) => {
   if (!group) {
     throw new Error("Error getting group info from database");
   } else if (!userDocument) {
-    throw new Error("Error getting mod's info from database");
+    throw new Error("Error getting user's info from database");
   } else if (!user) {
     throw new Error("Error deserializing authenticated user's info");
   } else {
@@ -316,6 +316,44 @@ const patchNewMod = asyncHandler(async (req: CustomRequest, res: Response) => {
   }
 });
 
+const patchUnbanUser = asyncHandler(async (req: CustomRequest, res) => {
+  // "user" is the currently authenticated user
+  // "userDocument" is the mongoose document of the user we're banning
+  const { group, user, userDocument } = req;
+  if (!group) {
+    throw new Error("Error getting group info from database");
+  } else if (!userDocument) {
+    throw new Error("Error getting user's info from database");
+  } else if (!user) {
+    throw new Error("Error deserializing authenticated user's info");
+  } else {
+    try {
+      const authUser = user as UserInterface;
+      if (group.admin !== authUser.id) {
+        // not admin = no go
+        res.status(403).json({ message: "Only group admin can unban users" });
+      } else if (!group.banned.includes(userDocument.id)) {
+        // only banned users can be ubanned
+        res.status(400).json({
+          message: `${userDocument.username} is not banned`,
+        });
+      } else {
+        // admin = go for it
+        group.banned.splice(group.banned.indexOf(userDocument.id), 1);
+        await group.save();
+        res.status(200).json({
+          message: `${userDocument.username} has been unbanned from ${group.name} group`,
+        });
+      }
+    } catch (err) {
+      res.status(500).json({
+        message: "Error unbanning user",
+        error: err,
+      });
+    }
+  }
+});
+
 // POST to create a new group with currently authenticated user as admin / owner
 const postNewGroup = [
   body("name")
@@ -395,6 +433,7 @@ const groupsController = {
   patchLeaveGroup,
   patchNewMember,
   patchNewMod,
+  patchUnbanUser,
   postNewGroup,
 };
 

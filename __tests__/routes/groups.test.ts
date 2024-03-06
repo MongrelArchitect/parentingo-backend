@@ -619,7 +619,6 @@ describe("PATCH /groups/:groupId/mods/demote/:userId", () => {
 });
 
 describe("PATCH /groups/:groupId/leave", () => {
-  // XXX
   it("handles unauthenticated user", (done) => {
     supertest(app)
       .patch("/groups/somebadid/leave")
@@ -985,5 +984,134 @@ describe("PATCH /groups/:groupId/ban/:userId", () => {
     expect(group.members.includes(user.id)).toBeFalsy();
     expect(group.mods.length).toBe(1);
     expect(group.mods.includes(user.id)).toBeFalsy();
+  });
+});
+
+describe("PATCH /groups/:groupId/unban/:userId", () => {
+  it("handles unauthenticated user", (done) => {
+    supertest(app)
+      .patch("/groups/123abc/unban/321def")
+      .expect(401, { message: "User authentication required" }, done);
+  });
+
+  it("handles invalid group id", (done) => {
+    supertest(app)
+      .patch("/groups/badgroupid/unban/baduserid")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, { message: "Invalid group id" }, done);
+  });
+
+  it("handles nonexistant group", async () => {
+    const user = await UserModel.findOne({ username: "notreason" });
+    if (!user) {
+      throw new Error("Error finding test user");
+    }
+    await supertest(app)
+      .patch(`/groups/601d0b50d91d180dd10d8f7a/unban/${user.id}`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(404, {
+        message: "No group found with id 601d0b50d91d180dd10d8f7a",
+      });
+  });
+
+  it("handles nonexistant user with real group", async () => {
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    await supertest(app)
+      .patch(`/groups/${group.id}/unban/601d0b50d91d180dd10d8f7a`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(404, {
+        message: "No user found with id 601d0b50d91d180dd10d8f7a",
+      });
+  });
+
+  it("handles non-admin making the request", async () => {
+    // need a non-admin user
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "notreason",
+        password: "NoAuthority68!",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const user = await UserModel.findOne({ username: "notreason" });
+    if (!user) {
+      throw new Error("Error finding test user");
+    }
+    await supertest(app)
+      .patch(`/groups/${group.id}/unban/${user.id}`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(403, { message: "Only group admin can unban users" });
+  });
+
+  it("successfully unbans user", async () => {
+    // need admin user
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "praxman",
+        password: "HumanAction123$",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const user = await UserModel.findOne({ username: "notreason" });
+    if (!user) {
+      throw new Error("Error finding test user");
+    }
+    await supertest(app)
+      .patch(`/groups/${group.id}/unban/${user.id}`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(200, {
+        message: `${user.username} has been unbanned from ${group.name} group`,
+      });
+  });
+
+  it("denies request if user is not banned", async () => {
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const user = await UserModel.findOne({ username: "notreason" });
+    if (!user) {
+      throw new Error("Error finding test user");
+    }
+    await supertest(app)
+      .patch(`/groups/${group.id}/unban/${user.id}`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, {
+        message: `${user.username} is not banned`,
+      });
+  });
+
+  it("has the correct banned list", async () => {
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const user = await UserModel.findOne({ username: "notreason" });
+    if (!user) {
+      throw new Error("Error finding test user");
+    }
+    expect(group.banned.length).toBe(1);
+    expect(group.banned.includes(user.id)).toBeFalsy();
   });
 });

@@ -75,7 +75,6 @@ groupsRoutes.patch(
 );
 
 // PATCH for an admin to remove a user & ban them from joining the group
-// XXX
 groupsRoutes.patch(
   "/:groupId/ban/:userId",
   auth.isAuthenticated,
@@ -87,6 +86,14 @@ groupsRoutes.patch(
 );
 
 // PATCH for an admin to unban a previously banned user
-// XXX
+groupsRoutes.patch(
+  "/:groupId/unban/:userId",
+  auth.isAuthenticated,
+  group.isValidGroupId,
+  group.exists,
+  user.isValidUserId,
+  user.exists,
+  groupsController.patchUnbanUser,
+);
 
 export default groupsRoutes;
