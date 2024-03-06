@@ -27,7 +27,7 @@ groupsRoutes.get(
   "/:groupId",
   auth.isAuthenticated,
   group.isValidGroupId,
-  group.exists,
+  group.checkAndAddToRequest,
   groupsController.getGroupInfo,
 );
 
@@ -39,7 +39,7 @@ groupsRoutes.patch(
   "/:groupId/members",
   auth.isAuthenticated,
   group.isValidGroupId,
-  group.exists,
+  group.checkAndAddToRequest,
   groupsController.patchNewMember,
 );
 
@@ -48,7 +48,7 @@ groupsRoutes.patch(
   "/:groupId/mods/:userId",
   auth.isAuthenticated,
   group.isValidGroupId,
-  group.exists,
+  group.checkAndAddToRequest,
   user.isValidUserId,
   user.exists,
   groupsController.patchNewMod,
@@ -59,7 +59,7 @@ groupsRoutes.patch(
   "/:groupId/mods/demote/:userId",
   auth.isAuthenticated,
   group.isValidGroupId,
-  group.exists,
+  group.checkAndAddToRequest,
   user.isValidUserId,
   user.exists,
   groupsController.deleteFromMods,
@@ -70,7 +70,7 @@ groupsRoutes.patch(
   "/:groupId/leave",
   auth.isAuthenticated,
   group.isValidGroupId,
-  group.exists,
+  group.checkAndAddToRequest,
   groupsController.patchLeaveGroup,
 );
 
@@ -79,7 +79,7 @@ groupsRoutes.patch(
   "/:groupId/ban/:userId",
   auth.isAuthenticated,
   group.isValidGroupId,
-  group.exists,
+  group.checkAndAddToRequest,
   user.isValidUserId,
   user.exists,
   groupsController.patchBanUser,
@@ -90,7 +90,7 @@ groupsRoutes.patch(
   "/:groupId/unban/:userId",
   auth.isAuthenticated,
   group.isValidGroupId,
-  group.exists,
+  group.checkAndAddToRequest,
   user.isValidUserId,
   user.exists,
   groupsController.patchUnbanUser,
