@@ -1,24 +1,15 @@
 import { NextFunction, Request, Response } from "express";
+import asyncHandler from "express-async-handler";
 import { isValidObjectId } from "mongoose";
 import GroupModel from "@models/group";
 import CustomRequest from "@interfaces/CustomRequest";
+import UserInterface from "@interfaces/Users";
 
 // our routes will first check that we have valid mongodb id
 function isValidGroupId(req: Request, res: Response, next: NextFunction) {
   const { groupId } = req.params;
   if (!isValidObjectId(groupId)) {
     res.status(400).json({ message: "Invalid group id" });
-  } else {
-    next();
-  }
-}
-
-// just check the existence of a group, don't need its data
-async function exists(req: CustomRequest, res: Response, next: NextFunction) {
-  const { groupId } = req.params;
-  const group = await GroupModel.exists({ id: groupId });
-  if (!group) {
-    res.status(404).json({ message: `No group found with id ${groupId}` });
   } else {
     next();
   }
@@ -40,9 +31,29 @@ async function checkAndAddToRequest(
   }
 }
 
+const checkIfGroupMember = asyncHandler(
+  async (req: CustomRequest, res, next) => {
+    const { group, user } = req;
+    if (!user) {
+      throw new Error("Error deserializing authenticated user's info");
+    } else if (!group) {
+      throw new Error("Error getting group info from database");
+    } else {
+      const userInfo = user as UserInterface;
+      if (!group.members.includes(userInfo.id)) {
+        res.status(403).json({
+          message: `${userInfo.username} is not a member of ${group.name} group`,
+        });
+      } else {
+        next();
+      }
+    }
+  },
+);
+
 const group = {
   checkAndAddToRequest,
-  exists,
+  checkIfGroupMember,
   isValidGroupId,
 };
 

@@ -9,6 +9,7 @@ import passport from "passport";
 
 // route imports
 import groupsRoutes from "@routes/groups";
+import postsRoutes from "@routes/posts";
 import usersRoutes from "@routes/users";
 
 // configs
@@ -61,12 +62,14 @@ app.use((req, res, next) => {
   const connected = connection.readyState === 1;
   if (!connected) {
     throw new Error("Not connected to database");
+  } else {
+    next();
   }
-  next();
 });
 
 // routes
 app.use("/groups", groupsRoutes);
+app.use("/groups/:groupId/posts", postsRoutes);
 app.use("/users", usersRoutes);
 
 // 404
