@@ -2,7 +2,7 @@
 import cors from "cors";
 import { config as dotenvConfig } from "dotenv";
 import express, { NextFunction, Request, Response } from "express";
-import session from "express-session";
+import session, { SessionOptions } from "express-session";
 import helmet from "helmet";
 import { connection } from "mongoose";
 import passport from "passport";
@@ -26,6 +26,7 @@ const SESSION_SECRET = process.env.SESSION_SECRET;
 if (!SESSION_SECRET) {
   throw new Error("SESSION_SECRET is not defined");
 }
+const NODE_ENV = process.env.NODE_ENV;
 
 // setup app & auth stuff
 const app = express();
@@ -40,21 +41,27 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(helmet());
-app.use(
-  session({
-    // XXX
-    // seems hacky to use "as string" here, better way to do it? ostensibly we'll
-    // have our environment variables set correctly, but can't have a fallback
-    // here for obvious reasons...
-    secret: SESSION_SECRET as string,
-    store,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      sameSite: "strict",
-    },
-  }),
-);
+const sessionOptions: SessionOptions = {
+  // XXX
+  // seems hacky to use "as string" here...ostensibly we'll
+  // have our environment variables set correctly, but can't have a fallback
+  // here for obvious reasons...
+  secret: SESSION_SECRET as string,
+  store,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    // 30 days
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+    sameSite: "strict",
+  },
+};
+// only use secure cookie in production - need plain http for local development
+if (NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+  sessionOptions.cookie ? (sessionOptions.cookie.secure = true) : null;
+}
+app.use(session(sessionOptions));
 app.use(passport.initialize());
 app.use(passport.session());
 app.use((req, res, next) => {
