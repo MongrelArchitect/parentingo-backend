@@ -8,6 +8,10 @@ import user from "@middleware/users";
 
 const groupsRoutes = Router();
 
+
+// GET basic information about all groups
+groupsRoutes.get("/", auth.isAuthenticated, groupsController.getAllGroups);
+
 // GET all groups that the currently authenticated user is a member of
 groupsRoutes.get(
   "/member",

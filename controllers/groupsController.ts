@@ -73,6 +73,27 @@ const deleteFromMods = asyncHandler(
   },
 );
 
+// GET basic info about all groups
+// XXX
+const getAllGroups = asyncHandler(async (req: CustomRequest, res: Response) => {
+  try {
+    const groups = await GroupModel.find();
+    if (!groups.length) {
+      res.status(200).json({ message: "No groups found", groups: null });
+    } else {
+      res.status(200).json({
+        message: `${groups.length} group${groups.length === 1 ? "" : "s"} found`,
+        groups: makeGroupList(groups),
+      });
+    }
+  } catch (err) {
+    res.status(500).json({
+      message: "Error finding groups",
+      error: err,
+    });
+  }
+});
+
 // GET info for a single group
 const getGroupInfo = asyncHandler(async (req: CustomRequest, res: Response) => {
   const { group } = req;
@@ -427,6 +448,7 @@ const postNewGroup = [
 
 const groupsController = {
   deleteFromMods,
+  getAllGroups,
   getGroupInfo,
   getMemberGroups,
   getOwnedGroups,

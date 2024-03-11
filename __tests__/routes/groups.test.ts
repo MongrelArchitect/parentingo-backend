@@ -1115,3 +1115,21 @@ describe("PATCH /groups/:groupId/unban/:userId", () => {
     expect(group.banned.includes(user.id)).toBeFalsy();
   });
 });
+
+describe("GET /groups", () => {
+  it("handles unauthenticated user", (done) => {
+    supertest(app)
+      .get("/groups/")
+      .expect("Content-Type", /json/)
+      .expect(401, { message: "User authentication required" }, done);
+  });
+
+  it("sends info about all groups", (done) => {
+    supertest(app)
+      .get("/groups/")
+      .set("Cookie", cookieControl.getCookie())
+      .expect("Content-Type", /json/)
+      .expect("Content-Length", "573")
+      .expect(200, done);
+  });
+});
