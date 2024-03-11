@@ -409,6 +409,7 @@ const postNewGroup = [
           banned: [],
         };
         const newGroup = new GroupModel(groupInfo);
+        groupInfo.id = newGroup._id.toString();
         newGroup.id = newGroup._id.toString();
         await newGroup.save();
         res

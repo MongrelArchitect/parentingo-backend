@@ -191,7 +191,7 @@ describe("POST /groups", () => {
         description: "this is just a test",
       })
       .expect("Content-Type", /json/)
-      .expect("Content-Length", "236")
+      .expect("Content-Length", "260")
       .expect(201, done);
   });
 
