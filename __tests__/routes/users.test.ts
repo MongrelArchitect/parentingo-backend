@@ -287,3 +287,47 @@ describe("POST /users/login", () => {
       .expect(403, { message: "User already authenticated" }, done);
   });
 });
+
+describe("GET /users/:userId", () => {
+  it("handles unauthenticated user", async () => {
+    const user = await UserModel.findOne({ username: "praxman" });
+    if (!user) {
+      throw new Error("Error finding test user");
+    }
+    await supertest(app)
+      .get(`/users/${user.id}/`)
+      .expect(401, { message: "User authentication required" });
+  });
+
+  it("handles invalid user id", (done) => {
+    supertest(app)
+      .get("/users/badid123/")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, { message: "Invalid user id" }, done);
+  });
+
+  it("handles valid but nonexistant user id", (done) => {
+    supertest(app)
+      .get("/users/601d0b50d91d180dd10d8f7a/")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(
+        404,
+        { message: "No user found with id 601d0b50d91d180dd10d8f7a" },
+        done,
+      );
+  });
+
+  it("responds with user info", async () => {
+    const user = await UserModel.findOne({ username: "praxman" });
+    if (!user) {
+      throw new Error("Error finding test user");
+    }
+    await supertest(app)
+      .get(`/users/${user.id}/`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(200, {
+        message: "User found",
+        user: { username: "praxman", name: "Ludwig von Mises" },
+      });
+  });
+});

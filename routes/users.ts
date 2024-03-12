@@ -1,6 +1,7 @@
 import { Router } from "express";
 
 import auth from "@middleware/auth";
+import user from "@middleware/users";
 
 import usersController from "@controllers/usersController";
 
@@ -14,6 +15,15 @@ usersRoutes.get(
   "/current",
   auth.isAuthenticated,
   usersController.getCurrentUser,
+);
+
+// GET public user info (name & username)
+usersRoutes.get(
+  "/:userId",
+  auth.isAuthenticated,
+  user.isValidUserId,
+  user.exists,
+  usersController.getUserInfo,
 );
 
 // POST to log in

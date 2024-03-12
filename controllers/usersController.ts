@@ -141,6 +141,22 @@ const getCurrentUser = asyncHandler(async (req, res) => {
   }
 });
 
+// GET public info about a particular user (username & real name)
+const getUserInfo = asyncHandler(async (req: CustomRequest, res) => {
+  const { userDocument } = req;
+  if (!userDocument) {
+    throw new Error("Error getting user info from database");
+  } else {
+    res.status(200).json({
+      message: "User found",
+      user: {
+        username: userDocument.username,
+        name: userDocument.name,
+      },
+    });
+  }
+});
+
 // POST to login a user
 const loginUser = [
   body("username").trim().escape().notEmpty().withMessage("Username required"),
@@ -202,6 +218,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 const usersController = {
   createNewUser,
   getCurrentUser,
+  getUserInfo,
   loginUser,
   logoutUser,
 };
