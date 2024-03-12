@@ -60,6 +60,27 @@ const getGroupPosts = asyncHandler(
   },
 );
 
+// GET a single post
+const getSinglePost = asyncHandler(async (req: CustomRequest, res) => {
+  const { post } = req;
+  if (!post) {
+    throw new Error("Error getting post info from database");
+  } else {
+    res.status(200).json({
+      message: "Post found",
+      post: {
+        id: post.id,
+        author: post.author,
+        timestamp: post.timestamp,
+        text: post.text,
+        group: post.group,
+        comments: post.comments,
+        likes: post.likes,
+      },
+    });
+  }
+});
+
 // POST to submit a new post
 const postNewPost = [
   body("text")
@@ -121,6 +142,7 @@ const postNewPost = [
 
 const postsController = {
   getGroupPosts,
+  getSinglePost,
   postNewPost,
 };
 
