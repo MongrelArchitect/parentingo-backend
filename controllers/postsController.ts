@@ -108,6 +108,33 @@ const patchLikePost = asyncHandler(async (req: CustomRequest, res) => {
   }
 });
 
+// PATCH to "unlike" a post
+const patchUnlikePost = asyncHandler(async (req: CustomRequest, res) => {
+  const { post, user } = req;
+  if (!user) {
+    throw new Error("Error deserializing user info");
+  } else if (!post) {
+    throw new Error("Error getting post from database");
+  } else {
+    try {
+      const userInfo = user as UserInterface;
+      if (!post.likes.includes(userInfo.id)) {
+        res.status(403).json({
+          message: "Post not liked",
+        });
+      } else {
+        post.likes.splice(post.likes.indexOf(userInfo.id), 1);
+        await post.save();
+        res.status(200).json({
+          message: "Post unliked",
+        });
+      }
+    } catch (err) {
+      res.status(500).json({ message: "Error unliking post", error: err });
+    }
+  }
+});
+
 // POST to submit a new post
 const postNewPost = [
   body("text")
@@ -171,6 +198,7 @@ const postsController = {
   getGroupPosts,
   getSinglePost,
   patchLikePost,
+  patchUnlikePost,
   postNewPost,
 };
 

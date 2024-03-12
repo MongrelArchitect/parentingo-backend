@@ -50,4 +50,16 @@ postsRoutes.patch(
   postsController.patchLikePost,
 );
 
+// PATCH to "unlike" a post
+postsRoutes.patch(
+  "/:postId/unlike",
+  auth.isAuthenticated,
+  group.isValidGroupId,
+  group.checkAndAddToRequest,
+  group.checkIfGroupMember,
+  post.isValidPostId,
+  post.checkAndAddToRequest,
+  postsController.patchUnlikePost,
+);
+
 export default postsRoutes;
