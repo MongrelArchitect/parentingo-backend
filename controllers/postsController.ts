@@ -1,11 +1,64 @@
 import { NextFunction, Response } from "express";
 import asyncHandler from "express-async-handler";
 import { body, matchedData, validationResult } from "express-validator";
+import { Document } from "mongoose";
+
 import CustomRequest from "@interfaces/CustomRequest";
+import PostInterface, { PostList } from "@interfaces/Posts";
+import UserInterface from "@interfaces/Users";
 
 import PostModel from "@models/post";
-import PostInterface from "@interfaces/Posts";
-import UserInterface from "@interfaces/Users";
+
+function makePostList(posts: Document[]): PostList {
+  // could just return the raw array, but i want it a bit cleaner...
+  const list: PostList = {};
+  posts.forEach((post) => {
+    // XXX
+    // better way to do this?
+    const postInfo = post as unknown as PostInterface;
+    list[postInfo.id] = {
+      id: postInfo.id,
+      author: postInfo.author,
+      timestamp: postInfo.timestamp,
+      text: postInfo.text,
+      group: postInfo.group,
+      image: postInfo.image,
+      comments: postInfo.comments,
+      likes: postInfo.likes,
+    };
+  });
+  return list;
+}
+
+// GET all posts from a specific group
+const getGroupPosts = asyncHandler(
+  async (req: CustomRequest, res: Response) => {
+    const { group } = req;
+    if (!group) {
+      throw new Error("Error getting group info from database");
+    } else {
+      try {
+        const posts = await PostModel.find({ group: group.id });
+        if (!posts.length) {
+          res.status(200).json({
+            message: "No posts found",
+            posts: null,
+          });
+        } else {
+          res.status(200).json({
+            message: `${posts.length} post${posts.length > 1 ? "s" : ""} found`,
+            posts: makePostList(posts),
+          });
+        }
+      } catch (err) {
+        res.status(500).json({
+          message: "Error finding group posts",
+          error: err,
+        });
+      }
+    }
+  },
+);
 
 // POST to submit a new post
 const postNewPost = [
@@ -54,13 +107,11 @@ const postNewPost = [
         const newPost = new PostModel(postInfo);
         newPost.id = newPost._id.toString();
         await newPost.save();
-        res
-          .status(201)
-          .json({
-            message: `New post added to ${group.name} group`,
-            id: newPost.id,
-            uri: `groups/${group.id}/posts/${newPost.id}`,
-          });
+        res.status(201).json({
+          message: `New post added to ${group.name} group`,
+          id: newPost.id,
+          uri: `/groups/${group.id}/posts/${newPost.id}`,
+        });
       } catch (err) {
         res.status(500).json({ message: "Error adding new post", error: err });
       }
@@ -69,6 +120,7 @@ const postNewPost = [
 ];
 
 const postsController = {
+  getGroupPosts,
   postNewPost,
 };
 

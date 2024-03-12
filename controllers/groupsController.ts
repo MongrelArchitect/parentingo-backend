@@ -74,7 +74,6 @@ const deleteFromMods = asyncHandler(
 );
 
 // GET basic info about all groups
-// XXX
 const getAllGroups = asyncHandler(async (req: CustomRequest, res: Response) => {
   try {
     const groups = await GroupModel.find();

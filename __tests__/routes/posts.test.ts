@@ -140,3 +140,45 @@ describe("POST /groups/:groupId/posts", () => {
       });
   });
 });
+
+describe("GET /groups/:groupId/posts/", () => {
+  it("handles unauthenticated user", (done) => {
+    supertest(app)
+      .get("/groups/123abc/posts")
+      .expect(401, { message: "User authentication required" }, done);
+  });
+
+  it("handles invalid group id", (done) => {
+    supertest(app)
+      .get("/groups/badgroupid/posts")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, { message: "Invalid group id" }, done);
+  });
+
+  it("handles nonexistant group", (done) => {
+    supertest(app)
+      .get("/groups/601d0b50d91d180dd10d8f7a/posts/")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(
+        404,
+        {
+          message: "No group found with id 601d0b50d91d180dd10d8f7a",
+        },
+        done,
+      );
+  });
+
+  it("gets all group posts", async () => {
+    const group = await GroupModel.findOne({ name: "general" });
+
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+
+    await supertest(app)
+      .get(`/groups/${group.id}/posts`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect("Content-Length", "258")
+      .expect(200);
+  });
+});

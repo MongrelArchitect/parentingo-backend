@@ -8,3 +8,7 @@ export default interface PostInterface {
   comments: string[]; // array of comment ids
   likes: string[]; // array of user ids
 }
+
+export interface PostList {
+  [key: string]: PostInterface;
+}
