@@ -81,6 +81,33 @@ const getSinglePost = asyncHandler(async (req: CustomRequest, res) => {
   }
 });
 
+// PATCH to "like" a post
+const patchLikePost = asyncHandler(async (req: CustomRequest, res) => {
+  const { post, user } = req;
+  if (!user) {
+    throw new Error("Error deserializing user info");
+  } else if (!post) {
+    throw new Error("Error getting post from database");
+  } else {
+    try {
+      const userInfo = user as UserInterface;
+      if (post.likes.includes(userInfo.id)) {
+        res.status(403).json({
+          message: "Can only like a post once",
+        });
+      } else {
+        post.likes.push(userInfo.id);
+        await post.save();
+        res.status(200).json({
+          message: "Post liked",
+        });
+      }
+    } catch (err) {
+      res.status(500).json({ message: "Error liking post", error: err });
+    }
+  }
+});
+
 // POST to submit a new post
 const postNewPost = [
   body("text")
@@ -143,6 +170,7 @@ const postNewPost = [
 const postsController = {
   getGroupPosts,
   getSinglePost,
+  patchLikePost,
   postNewPost,
 };
 

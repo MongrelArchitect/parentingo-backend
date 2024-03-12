@@ -38,4 +38,16 @@ postsRoutes.post(
   postsController.postNewPost,
 );
 
+// PATCH to "like" a post
+postsRoutes.patch(
+  "/:postId/like",
+  auth.isAuthenticated,
+  group.isValidGroupId,
+  group.checkAndAddToRequest,
+  group.checkIfGroupMember,
+  post.isValidPostId,
+  post.checkAndAddToRequest,
+  postsController.patchLikePost,
+);
+
 export default postsRoutes;
