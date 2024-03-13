@@ -8,6 +8,7 @@ import { connection } from "mongoose";
 import passport from "passport";
 
 // route imports
+import commentsRoutes from "@routes/comments";
 import groupsRoutes from "@routes/groups";
 import postsRoutes from "@routes/posts";
 import usersRoutes from "@routes/users";
@@ -77,6 +78,7 @@ app.use((req, res, next) => {
 // routes
 app.use("/groups", groupsRoutes);
 app.use("/groups/:groupId/posts", postsRoutes);
+app.use("/groups/:groupId/posts/:postId/comments", commentsRoutes);
 app.use("/users", usersRoutes);
 
 // 404

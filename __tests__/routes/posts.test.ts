@@ -179,7 +179,7 @@ describe("GET /groups/:groupId/posts/", () => {
     await supertest(app)
       .get(`/groups/${group.id}/posts`)
       .set("Cookie", cookieControl.getCookie())
-      .expect("Content-Length", "244")
+      .expect("Content-Length", "453")
       .expect(200);
   });
 });

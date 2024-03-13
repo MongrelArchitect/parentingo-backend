@@ -2,6 +2,8 @@ import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 import GroupModel from "@models/group";
 import GroupInterface from "@interfaces/Groups";
+import PostInterface from "@interfaces/Posts";
+import PostModel from "@models/post";
 import UserInterface from "@interfaces/Users";
 import UserModel from "@models/user";
 
@@ -70,6 +72,19 @@ beforeAll(async () => {
     const newGroup = new GroupModel(groupInfo);
     newGroup.id = newGroup._id.toString();
     await newGroup.save();
+
+    // add a post to our general group
+    const postInfo: PostInterface = {
+      id: "",
+      author: newUser.id,
+      timestamp: new Date(),
+      text: "praxeology rules",
+      group: newGroup.id,
+      likes: [],
+    };
+    const newPost = new PostModel(postInfo);
+    newPost.id = newPost._id.toString();
+    await newPost.save();
   }
 });
 
