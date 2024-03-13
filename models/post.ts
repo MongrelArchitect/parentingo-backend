@@ -9,7 +9,6 @@ const postSchema = new Schema<PostInterface>({
   text: {type: String, required: true},
   group: {type: String, required: true},
   image: String,
-  comments: {type: [String], requird: true},
   likes: {type: [String], requird: true},
 });
 

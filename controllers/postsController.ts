@@ -23,7 +23,6 @@ function makePostList(posts: Document[]): PostList {
       text: postInfo.text,
       group: postInfo.group,
       image: postInfo.image,
-      comments: postInfo.comments,
       likes: postInfo.likes,
     };
   });
@@ -74,7 +73,6 @@ const getSinglePost = asyncHandler(async (req: CustomRequest, res) => {
         timestamp: post.timestamp,
         text: post.text,
         group: post.group,
-        comments: post.comments,
         likes: post.likes,
       },
     });
@@ -176,7 +174,6 @@ const postNewPost = [
           timestamp: new Date(),
           group: group.id,
           text: data.text,
-          comments: [],
           likes: [],
         };
         const newPost = new PostModel(postInfo);

@@ -5,7 +5,6 @@ export default interface PostInterface {
   text: string;
   group: string; // id of group
   image?: string;
-  comments: string[]; // array of comment ids
   likes: string[]; // array of user ids
 }
 

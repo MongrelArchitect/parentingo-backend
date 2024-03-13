@@ -179,7 +179,7 @@ describe("GET /groups/:groupId/posts/", () => {
     await supertest(app)
       .get(`/groups/${group.id}/posts`)
       .set("Cookie", cookieControl.getCookie())
-      .expect("Content-Length", "258")
+      .expect("Content-Length", "244")
       .expect(200);
   });
 });
@@ -247,7 +247,7 @@ describe("GET /groups/:groupId/posts/:postId", () => {
     await supertest(app)
       .get(`/groups/${group.id}/posts/${post.id}/`)
       .set("Cookie", cookieControl.getCookie())
-      .expect("Content-Length", "226")
+      .expect("Content-Length", "212")
       .expect(200);
   });
 });
