@@ -8,6 +8,18 @@ import post from "@middleware/posts";
 
 const commentsRoutes = Router({ mergeParams: true });
 
+// GET a posts comment count
+commentsRoutes.get(
+  "/count",
+  auth.isAuthenticated,
+  group.isValidGroupId,
+  group.checkAndAddToRequest,
+  group.checkIfGroupMember,
+  post.isValidPostId,
+  post.checkAndAddToRequest,
+  commentsController.getCommentCount,
+);
+
 // POST a new comment
 commentsRoutes.post(
   "/",

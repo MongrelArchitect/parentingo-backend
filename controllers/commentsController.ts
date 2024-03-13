@@ -7,6 +7,31 @@ import CustomRequest from "@interfaces/CustomRequest";
 import UserInterface from "@interfaces/Users";
 import CommentModel from "@models/comment";
 
+// GET a count for how many comments a post has
+const getCommentCount = asyncHandler(
+  async (req: CustomRequest, res: Response) => {
+    const { group, post } = req;
+    if (!group) {
+      throw new Error("Error getting group info from database");
+    } else if (!post) {
+      throw new Error("Error getting post info from database");
+    } else {
+      try {
+        const count = await CommentModel.countDocuments({ post: post.id });
+        res.status(200).json({
+          message: `Post has ${count} comment${count === 1 ? "" : "s"}`,
+          count,
+        });
+      } catch (err) {
+        res
+          .status(500)
+          .json({ message: "Error getting comment count", error: err });
+      }
+    }
+  },
+);
+
+// POST to add a new comment
 const postNewComment = [
   body("text")
     .trim()
@@ -64,6 +89,7 @@ const postNewComment = [
 ];
 
 const commentsController = {
+  getCommentCount,
   postNewComment,
 };
 
