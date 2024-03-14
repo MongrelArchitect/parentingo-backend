@@ -14,10 +14,20 @@ commentsRoutes.get(
   auth.isAuthenticated,
   group.isValidGroupId,
   group.checkAndAddToRequest,
-  group.checkIfGroupMember,
   post.isValidPostId,
   post.checkAndAddToRequest,
   commentsController.getCommentCount,
+);
+
+// GET all comments for a post
+commentsRoutes.get(
+  "/",
+  auth.isAuthenticated,
+  group.isValidGroupId,
+  group.checkAndAddToRequest,
+  post.isValidPostId,
+  post.checkAndAddToRequest,
+  commentsController.getAllComments,
 );
 
 // POST a new comment

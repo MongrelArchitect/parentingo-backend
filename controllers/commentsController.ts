@@ -1,11 +1,64 @@
 import asyncHandler from "express-async-handler";
 import { NextFunction, Response } from "express";
 import { body, matchedData, validationResult } from "express-validator";
+import { Document } from "mongoose";
 
-import CommentInterface from "@interfaces/Comments";
+import CommentInterface, {CommentList} from "@interfaces/Comments";
 import CustomRequest from "@interfaces/CustomRequest";
 import UserInterface from "@interfaces/Users";
 import CommentModel from "@models/comment";
+
+function makeCommentsList(comments: Document[]): CommentList{
+  // could just return the raw array, but i want it a bit cleaner...
+  const list: CommentList = {};
+  comments.forEach((comment) => {
+    // XXX
+    // better way to do this?
+    const commentInfo = comment as unknown as CommentInterface;
+    list[commentInfo.id] = {
+      id: commentInfo.id,
+      author: commentInfo.author,
+      timestamp: commentInfo.timestamp,
+      text: commentInfo.text,
+      post: commentInfo.post,
+    };
+  });
+  return list;
+}
+
+// GET all comments for a post
+const getAllComments = asyncHandler(
+  async (req: CustomRequest, res: Response) => {
+    const { group, post } = req;
+    if (!group) {
+      throw new Error("Error getting group info from database");
+    } else if (!post) {
+      throw new Error("Error getting post info from database");
+    } else {
+      try {
+        const comments = await CommentModel.find({ post: post.id });
+        const message = `${comments.length} comment${comments.length === 1 ? "" : "s"} found`;
+        if (!comments.length) {
+        res
+          .status(200)
+          .json({
+            message,
+            comments: null
+          });
+        } else {
+        res
+          .status(200)
+          .json({
+            message,
+            comments: makeCommentsList(comments),
+          });
+        }
+      } catch (err) {
+        res.status(500).json({ message: "Error getting comments", error: err });
+      }
+    }
+  },
+);
 
 // GET a count for how many comments a post has
 const getCommentCount = asyncHandler(
@@ -89,6 +142,7 @@ const postNewComment = [
 ];
 
 const commentsController = {
+  getAllComments,
   getCommentCount,
   postNewComment,
 };

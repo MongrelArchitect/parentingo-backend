@@ -237,3 +237,74 @@ describe("GET /groups/:groupId/posts/:postId/comments/count", () => {
       });
   });
 });
+
+describe("GET /groups/:groupId/posts/:postId/comments", () => {
+  it("handles unauthenticated user", (done) => {
+    supertest(app)
+      .get("/groups/123abc/posts/456def/comments/")
+      .expect(401, { message: "User authentication required" }, done);
+  });
+
+  it("handles invalid group id", (done) => {
+    supertest(app)
+      .get("/groups/badgroupid/posts/456def/comments/")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, { message: "Invalid group id" }, done);
+  });
+
+  it("handles nonexistant group", (done) => {
+    supertest(app)
+      .get("/groups/601d0b50d91d180dd10d8f7a/posts/456def/comments/")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(
+        404,
+        {
+          message: "No group found with id 601d0b50d91d180dd10d8f7a",
+        },
+        done,
+      );
+  });
+
+  it("handles invalid post id", async () => {
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    await supertest(app)
+      .get(`/groups/${group.id}/posts/badpostid/comments/`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, { message: "Invalid post id" });
+  });
+
+  it("handles nonexistant post", async () => {
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    await supertest(app)
+      .get(`/groups/${group.id}/posts/601d0b50d91d180dd10d8f7a/comments/`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(404, {
+        message: "No post found with id 601d0b50d91d180dd10d8f7a",
+      });
+  });
+
+  it("gets all post comments", async () => {
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const post = await PostModel.findOne({group:group.id});
+    if (!post) {
+      throw new Error("Error finding test post");
+    }
+    await supertest(app)
+      .get(`/groups/${group.id}/posts/${post.id}/comments/`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect("Content-Length", "234")
+      .expect(200);
+
+      const comments = await CommentModel.find({post:post.id});
+      expect(comments.length).toBe(1);
+  });
+});
