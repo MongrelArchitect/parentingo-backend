@@ -78,7 +78,8 @@ beforeAll(async () => {
       id: "",
       author: newUser.id,
       timestamp: new Date(),
-      text: "praxeology rules",
+      text: "Human action is what drives the economy, and value is subjective.",
+      title: "Praxeology Rules",
       group: newGroup.id,
       likes: [],
     };

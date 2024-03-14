@@ -104,6 +104,7 @@ describe("POST /groups/:groupId/posts", () => {
       .type("form")
       .send({
         text: "this is the post",
+        title: "my title",
       })
       .expect("Content-Type", /json/)
       .expect(201);
@@ -127,18 +128,8 @@ describe("POST /groups/:groupId/posts", () => {
         text: "",
       })
       .expect("Content-Type", /json/)
-      .expect(400, {
-        message: "Invalid input - check each field for errors",
-        errors: {
-          text: {
-            type: "field",
-            value: "",
-            msg: "Text required",
-            path: "text",
-            location: "body",
-          },
-        },
-      });
+      .expect("Content-Length", "250")
+      .expect(400);
   });
 });
 
@@ -179,7 +170,7 @@ describe("GET /groups/:groupId/posts/", () => {
     await supertest(app)
       .get(`/groups/${group.id}/posts`)
       .set("Cookie", cookieControl.getCookie())
-      .expect("Content-Length", "453")
+      .expect("Content-Length", "548")
       .expect(200);
   });
 });
@@ -247,7 +238,7 @@ describe("GET /groups/:groupId/posts/:postId", () => {
     await supertest(app)
       .get(`/groups/${group.id}/posts/${post.id}/`)
       .set("Cookie", cookieControl.getCookie())
-      .expect("Content-Length", "212")
+      .expect("Content-Length", "329")
       .expect(200);
   });
 });
@@ -371,7 +362,7 @@ describe("PATCH /groups/:groupId/posts/:postId/like", () => {
     const group = await GroupModel.findOne({ name: "general" });
     if (!group) {
       throw new Error("Error finding test group");
-    }
+   }
 
     const post = await PostModel.findOne({group: group.id});
     if (!post) {

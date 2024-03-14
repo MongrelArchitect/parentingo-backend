@@ -3,6 +3,7 @@ export default interface PostInterface {
   author: string; // id of user
   timestamp: Date;
   text: string;
+  title: string;
   group: string; // id of group
   image?: string;
   likes: string[]; // array of user ids

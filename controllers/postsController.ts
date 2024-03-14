@@ -21,6 +21,7 @@ function makePostList(posts: Document[]): PostList {
       author: postInfo.author,
       timestamp: postInfo.timestamp,
       text: postInfo.text,
+      title: postInfo.title,
       group: postInfo.group,
       image: postInfo.image,
       likes: postInfo.likes,
@@ -67,14 +68,7 @@ const getSinglePost = asyncHandler(async (req: CustomRequest, res) => {
   } else {
     res.status(200).json({
       message: "Post found",
-      post: {
-        id: post.id,
-        author: post.author,
-        timestamp: post.timestamp,
-        text: post.text,
-        group: post.group,
-        likes: post.likes,
-      },
+      post,
     });
   }
 });
@@ -135,6 +129,14 @@ const patchUnlikePost = asyncHandler(async (req: CustomRequest, res) => {
 
 // POST to submit a new post
 const postNewPost = [
+  body("title")
+    .trim()
+    .escape()
+    .notEmpty()
+    .withMessage("Ttitle required")
+    .isLength({ min: 1, max: 255 })
+    .withMessage("Post cannot be more than 255 characters"),
+
   body("text")
     .trim()
     .escape()
@@ -174,6 +176,7 @@ const postNewPost = [
           timestamp: new Date(),
           group: group.id,
           text: data.text,
+          title: data.title,
           likes: [],
         };
         const newPost = new PostModel(postInfo);
