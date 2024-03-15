@@ -369,7 +369,7 @@ describe("GET /groups/member", () => {
     await supertest(app)
       .get("/groups/member")
       .set("Cookie", cookieControl.getCookie())
-      .expect(200, { message: "Not a member of any groups" });
+      .expect(200, { message: "Not a member of any groups", groups: null });
   });
 });
 

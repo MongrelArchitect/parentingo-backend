@@ -125,7 +125,9 @@ const getMemberGroups = [
         const userInfo = user as UserInterface;
         const groups = await GroupModel.find({ members: userInfo.id });
         if (!groups.length) {
-          res.status(200).json({ message: "Not a member of any groups" });
+          res
+            .status(200)
+            .json({ message: "Not a member of any groups", groups: null });
         } else {
           res.status(200).json({
             message: `User is a member of ${groups.length} group${groups.length === 1 ? "" : "s"}`,
