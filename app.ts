@@ -23,6 +23,7 @@ import PassportError from "@interfaces/PassportError";
 // setup environemnt variables
 dotenvConfig();
 const CORS_ORIGIN = process.env.CORS_ORIGIN;
+const origin = CORS_ORIGIN ? CORS_ORIGIN.split(",") : undefined;
 const SESSION_SECRET = process.env.SESSION_SECRET;
 if (!SESSION_SECRET) {
   throw new Error("SESSION_SECRET is not defined");
@@ -36,7 +37,8 @@ setupPassport();
 // middleware
 app.use(
   cors({
-    origin: CORS_ORIGIN,
+    credentials: true,
+    origin,
   }),
 );
 app.use(express.json());
