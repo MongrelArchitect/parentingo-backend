@@ -17,6 +17,15 @@ postsRoutes.get(
   postsController.getGroupPosts,
 );
 
+// just GET a post count for the group
+postsRoutes.get(
+  "/count",
+  auth.isAuthenticated,
+  group.isValidGroupId,
+  group.checkAndAddToRequest,
+  postsController.getPostCount
+);
+
 // GET a single post
 postsRoutes.get(
   "/:postId",

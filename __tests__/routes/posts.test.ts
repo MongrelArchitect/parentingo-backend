@@ -552,3 +552,42 @@ describe("PATCH /groups/:groupId/posts/:postId/unlike", () => {
     expect(post.likes.includes(user.id)).toBeFalsy();
   });
 });
+
+describe("GET /groups/:groupId/posts/count", () => {
+  it("handles unauthenticated user", (done) => {
+    supertest(app)
+      .get("/groups/123abc/posts/count")
+      .expect(401, { message: "User authentication required" }, done);
+  });
+
+  it("handles invalid group id", (done) => {
+    supertest(app)
+      .get("/groups/badgroupid/posts/count")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, { message: "Invalid group id" }, done);
+  });
+
+  it("handles nonexistant group", (done) => {
+    supertest(app)
+      .get("/groups/601d0b50d91d180dd10d8f7a/posts/count")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(
+        404,
+        {
+          message: "No group found with id 601d0b50d91d180dd10d8f7a",
+        },
+        done,
+      );
+  });
+
+  it("gets post count", async () => {
+    const group = await GroupModel.findOne({name:"general"});
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    await supertest(app)
+      .get(`/groups/${group.id}/posts/count`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(200, { message: "2 posts found", count: 2 });
+  });
+});

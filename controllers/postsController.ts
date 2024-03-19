@@ -60,6 +60,25 @@ const getGroupPosts = asyncHandler(
   },
 );
 
+
+// GET a count of all posts in a group
+const getPostCount = asyncHandler(async (req: CustomRequest, res: Response) => {
+  const { group } = req;
+  if (!group) {
+    throw new Error("Error getting group info from database");
+  } else {
+    try {
+      const count = await PostModel.countDocuments({group:group.id});
+      res.status(200).json({
+        message: `${count} post${count === 1 ? "" : "s"} found`,
+        count,
+      });
+    } catch (err) {
+      res.status(500).json({message:"Error getting post count", error: err});
+    }
+  }
+});
+
 // GET a single post
 const getSinglePost = asyncHandler(async (req: CustomRequest, res) => {
   const { post } = req;
@@ -196,6 +215,7 @@ const postNewPost = [
 
 const postsController = {
   getGroupPosts,
+  getPostCount,
   getSinglePost,
   patchLikePost,
   patchUnlikePost,
