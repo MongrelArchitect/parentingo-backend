@@ -23,7 +23,7 @@ import PassportError from "@interfaces/PassportError";
 // setup environemnt variables
 dotenvConfig();
 const CORS_ORIGIN = process.env.CORS_ORIGIN;
-const origin = CORS_ORIGIN ? CORS_ORIGIN.split(",") : undefined;
+const allowedOrigins = CORS_ORIGIN ? CORS_ORIGIN.split(",") : undefined;
 const SESSION_SECRET = process.env.SESSION_SECRET;
 if (!SESSION_SECRET) {
   throw new Error("SESSION_SECRET is not defined");
@@ -38,7 +38,7 @@ setupPassport();
 app.use(
   cors({
     credentials: true,
-    origin,
+    origin: allowedOrigins,
   }),
 );
 app.use(express.json());
@@ -54,9 +54,11 @@ const sessionOptions: SessionOptions = {
   resave: false,
   saveUninitialized: false,
   cookie: {
+    httpOnly: true,
     // 30 days
     maxAge: 30 * 24 * 60 * 60 * 1000,
-    sameSite: "strict",
+    sameSite: "none",
+    secure: NODE_ENV === "test" ? false : true,
   },
 };
 // only use secure cookie in production - need plain http for local development
