@@ -321,6 +321,11 @@ const patchNewMod = asyncHandler(async (req: CustomRequest, res: Response) => {
         res.status(400).json({
           message: "Only group members can be mods",
         });
+      } else if (group.mods.includes(userDocument.id)) {
+        // user is already a mod
+        res.status(409).json({
+          message: `User ${userDocument.username} is already a mod`,
+        });
       } else {
         // admin = go for it
         group.mods.push(userDocument.id);

@@ -458,6 +458,22 @@ describe("PATCH /groups/:groupId/mods/:userId", () => {
       });
   });
 
+  it("handles user already being a mod", async () => {
+    // XXX
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const user = await UserModel.findOne({ username: "notreason" });
+    if (!user) {
+      throw new Error("Error finding test user");
+    }
+    await supertest(app)
+      .patch(`/groups/${group.id}/mods/${user.id}`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(409, { message: "User notreason is already a mod" });
+  });
+
   it("has the correct number of mods in array", async () => {
     const group = await GroupModel.findOne({ name: "general" });
     if (!group) {
