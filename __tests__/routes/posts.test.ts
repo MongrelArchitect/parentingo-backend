@@ -313,7 +313,7 @@ describe("PATCH /groups/:groupId/posts/:postId/like", () => {
       throw new Error("Error finding test group");
     }
 
-    const post = await PostModel.findOne({group: group.id});
+    const post = await PostModel.findOne({ group: group.id });
     if (!post) {
       throw new Error("Error finding test post");
     }
@@ -345,7 +345,7 @@ describe("PATCH /groups/:groupId/posts/:postId/like", () => {
       throw new Error("Error finding test group");
     }
 
-    const post = await PostModel.findOne({group: group.id});
+    const post = await PostModel.findOne({ group: group.id });
     if (!post) {
       throw new Error("Error finding test post");
     }
@@ -362,9 +362,9 @@ describe("PATCH /groups/:groupId/posts/:postId/like", () => {
     const group = await GroupModel.findOne({ name: "general" });
     if (!group) {
       throw new Error("Error finding test group");
-   }
+    }
 
-    const post = await PostModel.findOne({group: group.id});
+    const post = await PostModel.findOne({ group: group.id });
     if (!post) {
       throw new Error("Error finding test post");
     }
@@ -383,12 +383,12 @@ describe("PATCH /groups/:groupId/posts/:postId/like", () => {
       throw new Error("Error finding test group");
     }
 
-    const post = await PostModel.findOne({group: group.id});
+    const post = await PostModel.findOne({ group: group.id });
     if (!post) {
       throw new Error("Error finding test post");
     }
 
-    const user = await UserModel.findOne({username:"praxman"});
+    const user = await UserModel.findOne({ username: "praxman" });
     if (!user) {
       throw new Error("Error finding test user");
     }
@@ -468,7 +468,7 @@ describe("PATCH /groups/:groupId/posts/:postId/unlike", () => {
       throw new Error("Error finding test group");
     }
 
-    const post = await PostModel.findOne({group: group.id});
+    const post = await PostModel.findOne({ group: group.id });
     if (!post) {
       throw new Error("Error finding test post");
     }
@@ -500,7 +500,7 @@ describe("PATCH /groups/:groupId/posts/:postId/unlike", () => {
       throw new Error("Error finding test group");
     }
 
-    const post = await PostModel.findOne({group: group.id});
+    const post = await PostModel.findOne({ group: group.id });
     if (!post) {
       throw new Error("Error finding test post");
     }
@@ -519,7 +519,7 @@ describe("PATCH /groups/:groupId/posts/:postId/unlike", () => {
       throw new Error("Error finding test group");
     }
 
-    const post = await PostModel.findOne({group: group.id});
+    const post = await PostModel.findOne({ group: group.id });
     if (!post) {
       throw new Error("Error finding test post");
     }
@@ -538,12 +538,12 @@ describe("PATCH /groups/:groupId/posts/:postId/unlike", () => {
       throw new Error("Error finding test group");
     }
 
-    const post = await PostModel.findOne({group: group.id});
+    const post = await PostModel.findOne({ group: group.id });
     if (!post) {
       throw new Error("Error finding test post");
     }
 
-    const user = await UserModel.findOne({username:"praxman"});
+    const user = await UserModel.findOne({ username: "praxman" });
     if (!user) {
       throw new Error("Error finding test user");
     }
@@ -581,7 +581,7 @@ describe("GET /groups/:groupId/posts/count", () => {
   });
 
   it("gets post count", async () => {
-    const group = await GroupModel.findOne({name:"general"});
+    const group = await GroupModel.findOne({ name: "general" });
     if (!group) {
       throw new Error("Error finding test group");
     }
@@ -589,5 +589,116 @@ describe("GET /groups/:groupId/posts/count", () => {
       .get(`/groups/${group.id}/posts/count`)
       .set("Cookie", cookieControl.getCookie())
       .expect(200, { message: "2 posts found", count: 2 });
+  });
+});
+
+describe("DELETE /groups/:groupId/posts/:postId", () => {
+  it("handles unauthenticated user", (done) => {
+    supertest(app)
+      .delete("/groups/123abc/posts/badpostid/")
+      .expect(401, { message: "User authentication required" }, done);
+  });
+
+  it("handles invalid group id", (done) => {
+    supertest(app)
+      .delete("/groups/badgroupid/posts/badpostid/")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, { message: "Invalid group id" }, done);
+  });
+
+  it("handles nonexistant group", (done) => {
+    supertest(app)
+      .delete("/groups/601d0b50d91d180dd10d8f7a/posts/badpostid/")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(
+        404,
+        {
+          message: "No group found with id 601d0b50d91d180dd10d8f7a",
+        },
+        done,
+      );
+  });
+
+  it("handles invalid post id", async () => {
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    await supertest(app)
+      .delete(`/groups/${group.id}/posts/badpostid/`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, { message: "Invalid post id" });
+  });
+
+  it("handles nonexistant post ", async () => {
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    await supertest(app)
+      .delete(`/groups/${group.id}/posts/601d0b50d91d180dd10d8f7a/`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(404, {
+        message: "No post found with id 601d0b50d91d180dd10d8f7a",
+      });
+  });
+
+  it("handles non-admin making the request", async () => {
+    // need a non-admin user
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "notreason",
+        password: "NoAuthority68!",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const post = await PostModel.findOne({ group: group.id });
+    if (!post) {
+      throw new Error("Error finding test post");
+    }
+    await supertest(app)
+      .delete(`/groups/${group.id}/posts/${post.id}`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(403, { message: "Only group admin can delete posts" });
+  });
+
+  it("deletes post", async () => {
+    // need admin user
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "praxman",
+        password: "HumanAction123$",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const post = await PostModel.findOne({ group: group.id });
+    if (!post) {
+      throw new Error("Error finding test post");
+    }
+    await supertest(app)
+      .delete(`/groups/${group.id}/posts/${post.id}`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(200, { message: "Post deleted" });
+
+    const postCount = await PostModel.countDocuments({ group: group.id });
+    expect(postCount).toBe(1);
   });
 });

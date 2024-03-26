@@ -30,6 +30,30 @@ function makePostList(posts: Document[]): PostList {
   return list;
 }
 
+// DELETE a single post
+const deletePost = asyncHandler(async (req: CustomRequest, res: Response) => {
+  const { group, post, user } = req;
+  if (!group) {
+  } else if (!post) {
+  } else if (!user) {
+  } else {
+    try {
+      const authUser = user as UserInterface;
+      if (authUser.id !== group.admin) {
+        res.status(403).json({message: "Only group admin can delete posts"});
+      } else {
+        await PostModel.findByIdAndDelete(post.id);
+        res.status(200).json({message: "Post deleted"});
+      }
+    } catch (err) {
+      res.status(500).json({
+        message: "Error deleting post",
+        error: err,
+      });
+    }
+  }
+});
+
 // GET all posts from a specific group
 const getGroupPosts = asyncHandler(
   async (req: CustomRequest, res: Response) => {
@@ -214,6 +238,7 @@ const postNewPost = [
 ];
 
 const postsController = {
+  deletePost,
   getGroupPosts,
   getPostCount,
   getSinglePost,

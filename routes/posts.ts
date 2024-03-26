@@ -23,7 +23,7 @@ postsRoutes.get(
   auth.isAuthenticated,
   group.isValidGroupId,
   group.checkAndAddToRequest,
-  postsController.getPostCount
+  postsController.getPostCount,
 );
 
 // GET a single post
@@ -69,6 +69,17 @@ postsRoutes.patch(
   post.isValidPostId,
   post.checkAndAddToRequest,
   postsController.patchUnlikePost,
+);
+
+// DELETE for admin to remove a post
+postsRoutes.delete(
+  "/:postId",
+  auth.isAuthenticated,
+  group.isValidGroupId,
+  group.checkAndAddToRequest,
+  post.isValidPostId,
+  post.checkAndAddToRequest,
+  postsController.deletePost,
 );
 
 export default postsRoutes;

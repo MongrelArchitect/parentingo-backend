@@ -459,7 +459,6 @@ describe("PATCH /groups/:groupId/mods/:userId", () => {
   });
 
   it("handles user already being a mod", async () => {
-    // XXX
     const group = await GroupModel.findOne({ name: "general" });
     if (!group) {
       throw new Error("Error finding test group");
