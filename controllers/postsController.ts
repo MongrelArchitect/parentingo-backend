@@ -7,6 +7,7 @@ import CustomRequest from "@interfaces/CustomRequest";
 import PostInterface, { PostList } from "@interfaces/Posts";
 import UserInterface from "@interfaces/Users";
 
+import CommentModel from "@models/comment";
 import PostModel from "@models/post";
 
 function makePostList(posts: Document[]): PostList {
@@ -40,10 +41,12 @@ const deletePost = asyncHandler(async (req: CustomRequest, res: Response) => {
     try {
       const authUser = user as UserInterface;
       if (authUser.id !== group.admin) {
-        res.status(403).json({message: "Only group admin can delete posts"});
+        res.status(403).json({ message: "Only group admin can delete posts" });
       } else {
+        // delete the post itself, then any of its comments
         await PostModel.findByIdAndDelete(post.id);
-        res.status(200).json({message: "Post deleted"});
+        await CommentModel.deleteMany({ post: post.id });
+        res.status(200).json({ message: "Post deleted" });
       }
     } catch (err) {
       res.status(500).json({
@@ -84,7 +87,6 @@ const getGroupPosts = asyncHandler(
   },
 );
 
-
 // GET a count of all posts in a group
 const getPostCount = asyncHandler(async (req: CustomRequest, res: Response) => {
   const { group } = req;
@@ -92,13 +94,13 @@ const getPostCount = asyncHandler(async (req: CustomRequest, res: Response) => {
     throw new Error("Error getting group info from database");
   } else {
     try {
-      const count = await PostModel.countDocuments({group:group.id});
+      const count = await PostModel.countDocuments({ group: group.id });
       res.status(200).json({
         message: `${count} post${count === 1 ? "" : "s"} found`,
         count,
       });
     } catch (err) {
-      res.status(500).json({message:"Error getting post count", error: err});
+      res.status(500).json({ message: "Error getting post count", error: err });
     }
   }
 });

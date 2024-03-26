@@ -2,6 +2,7 @@ import supertest from "supertest";
 import app from "../../app";
 import cookieControl from "../config/session";
 
+import CommentModel from "@models/comment";
 import GroupModel from "@models/group";
 import PostModel from "@models/post";
 import UserModel from "@models/user";
@@ -671,7 +672,7 @@ describe("DELETE /groups/:groupId/posts/:postId", () => {
       .expect(403, { message: "Only group admin can delete posts" });
   });
 
-  it("deletes post", async () => {
+  it("deletes post and its comments", async () => {
     // need admin user
     const res = await supertest(app)
       .post("/users/login")
@@ -693,12 +694,43 @@ describe("DELETE /groups/:groupId/posts/:postId", () => {
     if (!post) {
       throw new Error("Error finding test post");
     }
+
+    // give our test post some comments
+    await supertest(app)
+      .post(`/groups/${group.id}/posts/${post.id}/comments`)
+      .set("Cookie", cookieControl.getCookie())
+      .type("form")
+      .send({
+        text: "here is a comment",
+      })
+      .expect(200);
+    await supertest(app)
+      .post(`/groups/${group.id}/posts/${post.id}/comments`)
+      .set("Cookie", cookieControl.getCookie())
+      .type("form")
+      .send({
+        text: "another comment goes here",
+      })
+      .expect(200);
+    const commentCountBefore = await CommentModel.countDocuments({
+      post: post.id,
+    });
+    expect(commentCountBefore).toBe(2);
+
+    // delete the post
     await supertest(app)
       .delete(`/groups/${group.id}/posts/${post.id}`)
       .set("Cookie", cookieControl.getCookie())
       .expect(200, { message: "Post deleted" });
 
+    // make sure our group now has correct number of posts
     const postCount = await PostModel.countDocuments({ group: group.id });
     expect(postCount).toBe(1);
+
+    // make sure the post comment was also deleted
+    const commentCountAfter = await CommentModel.countDocuments({
+      post: post.id,
+    });
+    expect(commentCountAfter).toBe(0);
   });
 });
