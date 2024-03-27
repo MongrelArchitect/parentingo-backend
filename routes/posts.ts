@@ -79,6 +79,7 @@ postsRoutes.delete(
   group.checkAndAddToRequest,
   post.isValidPostId,
   post.checkAndAddToRequest,
+  group.checkIfGroupAdmin,
   postsController.deletePost,
 );
 

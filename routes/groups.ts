@@ -55,6 +55,7 @@ groupsRoutes.patch(
   group.checkAndAddToRequest,
   user.isValidUserId,
   user.exists,
+  group.checkIfGroupAdmin,
   groupsController.patchNewMod,
 );
 
@@ -66,6 +67,7 @@ groupsRoutes.patch(
   group.checkAndAddToRequest,
   user.isValidUserId,
   user.exists,
+  group.checkIfGroupAdmin,
   groupsController.deleteFromMods,
 );
 
@@ -75,6 +77,7 @@ groupsRoutes.patch(
   auth.isAuthenticated,
   group.isValidGroupId,
   group.checkAndAddToRequest,
+  group.checkIfGroupMember,
   groupsController.patchLeaveGroup,
 );
 
@@ -86,6 +89,7 @@ groupsRoutes.patch(
   group.checkAndAddToRequest,
   user.isValidUserId,
   user.exists,
+  group.checkIfGroupAdmin,
   groupsController.patchBanUser,
 );
 
@@ -97,6 +101,7 @@ groupsRoutes.patch(
   group.checkAndAddToRequest,
   user.isValidUserId,
   user.exists,
+  group.checkIfGroupAdmin,
   groupsController.patchUnbanUser,
 );
 

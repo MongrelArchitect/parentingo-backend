@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import asyncHandler from "express-async-handler";
-import { isValidObjectId } from "mongoose";
+import { Cursor, isValidObjectId } from "mongoose";
 import GroupModel from "@models/group";
 import CustomRequest from "@interfaces/CustomRequest";
 import UserInterface from "@interfaces/Users";
@@ -32,6 +32,7 @@ async function checkAndAddToRequest(
 }
 
 const checkIfGroupMember = asyncHandler(
+  // checks if the currently authenticated user is a member of the group
   async (req: CustomRequest, res, next) => {
     const { group, user } = req;
     if (!user) {
@@ -51,8 +52,30 @@ const checkIfGroupMember = asyncHandler(
   },
 );
 
+const checkIfGroupAdmin = asyncHandler(
+  // checks if the currently authenticated user is the admin of the group
+  async (req: CustomRequest, res, next) => {
+    const { group, user } = req;
+    if (!user) {
+      throw new Error("Error deserializing authenticated user's info");
+    } else if (!group) {
+      throw new Error("Error getting group info from database");
+    } else {
+      const userInfo = user as UserInterface;
+      if (group.admin !== userInfo.id) {
+        res.status(403).json({
+          message: "Only group admin can make this request",
+        });
+      } else {
+        next();
+      }
+    }
+  },
+);
+
 const group = {
   checkAndAddToRequest,
+  checkIfGroupAdmin,
   checkIfGroupMember,
   isValidGroupId,
 };

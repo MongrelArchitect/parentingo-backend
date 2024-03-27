@@ -33,24 +33,15 @@ function makePostList(posts: Document[]): PostList {
 
 // DELETE a single post
 const deletePost = asyncHandler(async (req: CustomRequest, res: Response) => {
-  const { group, post, user } = req;
-  if (!group) {
-    throw new Error("Error getting group info from database");
-  } else if (!post) {
+  const { post } = req;
+  if (!post) {
     throw new Error("Error getting post info from database");
-  } else if (!user) {
-    throw new Error("Error deserializing authenticated user");
   } else {
     try {
-      const authUser = user as UserInterface;
-      if (authUser.id !== group.admin) {
-        res.status(403).json({ message: "Only group admin can delete posts" });
-      } else {
         // delete the post itself, then any of its comments
         await PostModel.findByIdAndDelete(post.id);
         await CommentModel.deleteMany({ post: post.id });
         res.status(200).json({ message: "Post deleted" });
-      }
     } catch (err) {
       res.status(500).json({
         message: "Error deleting post",

@@ -26,28 +26,19 @@ function makeCommentsList(comments: Document[]): CommentList {
   return list;
 }
 
-// DELETE a single comment 
+// DELETE a single comment
 const deleteComment = asyncHandler(
   async (req: CustomRequest, res: Response) => {
-    const { comment, group, user } = req;
+    const { comment, group } = req;
     if (!group) {
       throw new Error("Error getting group info from database");
     } else if (!comment) {
       throw new Error("Error getting comment info from database");
-    } else if (!user) {
-      throw new Error("Error deserializing authenticated user's info");
     } else {
       try {
-        const authUser = user as UserInterface;
-        if (authUser.id !== group.admin) {
-          res
-            .status(403)
-            .json({ message: "Only group admin can delete comments" });
-        } else {
-          // delete the post itself, then any of its comments
-          await CommentModel.findByIdAndDelete(comment.id);
-          res.status(200).json({ message: "Comment deleted" });
-        }
+        // delete the post itself, then any of its comments
+        await CommentModel.findByIdAndDelete(comment.id);
+        res.status(200).json({ message: "Comment deleted" });
       } catch (err) {
         res.status(500).json({
           message: "Error deleting comment",

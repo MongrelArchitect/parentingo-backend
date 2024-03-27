@@ -425,7 +425,7 @@ describe("PATCH /groups/:groupId/mods/:userId", () => {
     await supertest(app)
       .patch(`/groups/${group.id}/mods/${user.id}`)
       .set("Cookie", cookieControl.getCookie())
-      .expect(403, { message: "Only group admin can designate mods" });
+      .expect(403, { message: "Only group admin can make this request" });
   });
 
   it("successfully designates user as mod", async () => {
@@ -569,7 +569,7 @@ describe("PATCH /groups/:groupId/mods/demote/:userId", () => {
     await supertest(app)
       .patch(`/groups/${group.id}/mods/demote/${user.id}`)
       .set("Cookie", cookieControl.getCookie())
-      .expect(403, { message: "Only group admin can demote mods" });
+      .expect(403, { message: "Only group admin can make this request" });
   });
 
   it("successfully demotes mod to member", async () => {
@@ -714,7 +714,9 @@ describe("PATCH /groups/:groupId/leave", () => {
     await supertest(app)
       .patch(`/groups/${group.id}/leave`)
       .set("Cookie", cookieControl.getCookie())
-      .expect(403, { message: `User is not a member of ${group.name} group` });
+      .expect(403, {
+        message: `imbanned is not a member of ${group.name} group`,
+      });
   });
 
   it("prevents admin from leaving group", async () => {
@@ -887,7 +889,7 @@ describe("PATCH /groups/:groupId/ban/:userId", () => {
     await supertest(app)
       .patch(`/groups/${group.id}/ban/${user.id}`)
       .set("Cookie", cookieControl.getCookie())
-      .expect(403, { message: "Only group admin can ban users" });
+      .expect(403, { message: "Only group admin can make this request" });
   });
 
   it("denies request if user is not a group member", async () => {
@@ -1067,7 +1069,7 @@ describe("PATCH /groups/:groupId/unban/:userId", () => {
     await supertest(app)
       .patch(`/groups/${group.id}/unban/${user.id}`)
       .set("Cookie", cookieControl.getCookie())
-      .expect(403, { message: "Only group admin can unban users" });
+      .expect(403, { message: "Only group admin can make this request" });
   });
 
   it("successfully unbans user", async () => {

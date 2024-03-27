@@ -32,36 +32,26 @@ function makeGroupList(groups: Document[]): GroupList {
 // PATCH to demote a user from mod to regular member
 const deleteFromMods = asyncHandler(
   async (req: CustomRequest, res: Response) => {
-    // "user" is the currently authenticated user
     // "userDocument" is the mongoose document of the user we're demoting
-    const { group, user, userDocument } = req;
+    const { group, userDocument } = req;
     if (!group) {
       throw new Error("Error getting group info from database");
     } else if (!userDocument) {
       throw new Error("Error getting mod's info from database");
-    } else if (!user) {
-      throw new Error("Error deserializing authenticated user's info");
     } else {
       try {
-        // time to see if it's the admin making the request
-        const authUser = user as UserInterface;
-        if (group.admin !== authUser.id) {
-          // not admin = no go
-          res.status(403).json({ message: "Only group admin can demote mods" });
+        if (!group.mods.includes(userDocument.id)) {
+          // only group members can be mods
+          res.status(400).json({
+            message: "Only mods can be demoted",
+          });
         } else {
-          if (!group.mods.includes(userDocument.id)) {
-            // only group members can be mods
-            res.status(400).json({
-              message: "Only mods can be demoted",
-            });
-          } else {
-            // admin = go for it
-            group.mods.splice(group.mods.indexOf(userDocument.id), 1);
-            await group.save();
-            res.status(200).json({
-              message: `${userDocument.username} demoted from mod to member`,
-            });
-          }
+          // go for it
+          group.mods.splice(group.mods.indexOf(userDocument.id), 1);
+          await group.save();
+          res.status(200).json({
+            message: `${userDocument.username} demoted from mod to member`,
+          });
         }
       } catch (err) {
         res.status(500).json({
@@ -186,10 +176,7 @@ const patchBanUser = asyncHandler(async (req: CustomRequest, res: Response) => {
   } else {
     try {
       const authUser = user as UserInterface;
-      if (group.admin !== authUser.id) {
-        // not admin = no go
-        res.status(403).json({ message: "Only group admin can ban users" });
-      } else if (!group.members.includes(userDocument.id)) {
+      if (!group.members.includes(userDocument.id)) {
         // only group members can be banned
         res.status(400).json({
           message: "Only group members can be banned",
@@ -232,11 +219,6 @@ const patchLeaveGroup = asyncHandler(
         if (group.admin === userInfo.id) {
           // admin can't leave group...don't forget, you're here forever!
           res.status(403).json({ message: "Admin cannot leave group" });
-        } else if (!group.members.includes(userInfo.id)) {
-          // user has to be a member of the group in order to leave it
-          res
-            .status(403)
-            .json({ message: `User is not a member of ${group.name} group` });
         } else {
           // leave the group
           group.members.splice(group.members.indexOf(userInfo.id), 1);
@@ -301,22 +283,14 @@ const patchNewMember = asyncHandler(
 const patchNewMod = asyncHandler(async (req: CustomRequest, res: Response) => {
   // "user" is the currently authenticated user
   // "userDocument" is the mongoose document for the user we're trying to add
-  const { group, user, userDocument } = req;
+  const { group, userDocument } = req;
   if (!group) {
     throw new Error("Error getting group info from database");
   } else if (!userDocument) {
     throw new Error("Error getting new mod user's info from database");
-  } else if (!user) {
-    throw new Error("Error deserializing authenticated user's info");
   } else {
     try {
-      const authUser = user as UserInterface;
-      if (group.admin !== authUser.id) {
-        // not admin = no go
-        res
-          .status(403)
-          .json({ message: "Only group admin can designate mods" });
-      } else if (!group.members.includes(userDocument.id)) {
+      if (!group.members.includes(userDocument.id)) {
         // only group members can be mods
         res.status(400).json({
           message: "Only group members can be mods",
@@ -346,20 +320,14 @@ const patchNewMod = asyncHandler(async (req: CustomRequest, res: Response) => {
 const patchUnbanUser = asyncHandler(async (req: CustomRequest, res) => {
   // "user" is the currently authenticated user
   // "userDocument" is the mongoose document of the user we're banning
-  const { group, user, userDocument } = req;
+  const { group, userDocument } = req;
   if (!group) {
     throw new Error("Error getting group info from database");
   } else if (!userDocument) {
     throw new Error("Error getting user's info from database");
-  } else if (!user) {
-    throw new Error("Error deserializing authenticated user's info");
   } else {
     try {
-      const authUser = user as UserInterface;
-      if (group.admin !== authUser.id) {
-        // not admin = no go
-        res.status(403).json({ message: "Only group admin can unban users" });
-      } else if (!group.banned.includes(userDocument.id)) {
+      if (!group.banned.includes(userDocument.id)) {
         // only banned users can be ubanned
         res.status(400).json({
           message: `${userDocument.username} is not banned`,

@@ -379,7 +379,7 @@ describe("DELETE /groups/:groupId/posts/:postId/comments/:commentId", () => {
     await supertest(app)
       .delete(`/groups/${group.id}/posts/${post.id}/comments/${comment.id}`)
       .set("Cookie", cookieControl.getCookie())
-      .expect(403, { message: "Only group admin can delete comments" });
+      .expect(403, { message: "Only group admin can make this request" });
   });
 
   it("deletes comment", async () => {
