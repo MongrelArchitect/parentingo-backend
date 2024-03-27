@@ -35,8 +35,11 @@ function makePostList(posts: Document[]): PostList {
 const deletePost = asyncHandler(async (req: CustomRequest, res: Response) => {
   const { group, post, user } = req;
   if (!group) {
+    throw new Error("Error getting group info from database");
   } else if (!post) {
+    throw new Error("Error getting post info from database");
   } else if (!user) {
+    throw new Error("Error deserializing authenticated user");
   } else {
     try {
       const authUser = user as UserInterface;
