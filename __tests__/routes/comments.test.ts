@@ -224,7 +224,7 @@ describe("GET /groups/:groupId/posts/:postId/comments/count", () => {
     if (!group) {
       throw new Error("Error finding test group");
     }
-    const post = await PostModel.findOne({group:group.id});
+    const post = await PostModel.findOne({ group: group.id });
     if (!post) {
       throw new Error("Error finding test post");
     }
@@ -294,7 +294,7 @@ describe("GET /groups/:groupId/posts/:postId/comments", () => {
     if (!group) {
       throw new Error("Error finding test group");
     }
-    const post = await PostModel.findOne({group:group.id});
+    const post = await PostModel.findOne({ group: group.id });
     if (!post) {
       throw new Error("Error finding test post");
     }
@@ -304,7 +304,116 @@ describe("GET /groups/:groupId/posts/:postId/comments", () => {
       .expect("Content-Length", "234")
       .expect(200);
 
-      const comments = await CommentModel.find({post:post.id});
-      expect(comments.length).toBe(1);
+    const comments = await CommentModel.find({ post: post.id });
+    expect(comments.length).toBe(1);
+  });
+});
+
+describe("DELETE /groups/:groupId/posts/:postId/comments/:commentId", () => {
+  it("handles unauthenticated user", (done) => {
+    supertest(app)
+      .delete("/groups/123abc/posts/456def/comments/789ghi")
+      .expect(401, { message: "User authentication required" }, done);
+  });
+
+  it("handles invalid group id", (done) => {
+    supertest(app)
+      .delete("/groups/badgroupid/posts/456def/comments/789ghi")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, { message: "Invalid group id" }, done);
+  });
+
+  it("handles invalid comment id", async () => {
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error getting test group");
+    }
+    await supertest(app)
+      .delete(`/groups/${group.id}/posts/456def/comments/789ghi`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, { message: "Invalid comment id" });
+  });
+
+  it("handles nonexistant comment", async () => {
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error getting test group");
+    }
+    await supertest(app)
+      .delete(
+        `/groups/${group.id}/posts/456def/comments/601d0b50d91d180dd10d8f7a`,
+      )
+      .set("Cookie", cookieControl.getCookie())
+      .expect(404, {
+        message: "No comment found with id 601d0b50d91d180dd10d8f7a",
+      });
+  });
+
+  it("handles non-admin making the request", async () => {
+    // need a non-admin user
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "notreason",
+        password: "NoAuthority68!",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const post = await PostModel.findOne({ group: group.id });
+    if (!post) {
+      throw new Error("Error finding test post");
+    }
+    const comment = await CommentModel.findOne({});
+    if (!comment) {
+      throw new Error("Error finding test comment");
+    }
+
+    await supertest(app)
+      .delete(`/groups/${group.id}/posts/${post.id}/comments/${comment.id}`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(403, { message: "Only group admin can delete comments" });
+  });
+
+  it("deletes comment", async () => {
+    // need admin user
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "praxman",
+        password: "HumanAction123$",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const post = await PostModel.findOne({ group: group.id });
+    if (!post) {
+      throw new Error("Error finding test post");
+    }
+    const comment = await CommentModel.findOne({});
+    if (!comment) {
+      throw new Error("Error finding test comment");
+    }
+    await supertest(app)
+      .delete(`/groups/${group.id}/posts/${post.id}/comments/${comment.id}`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(200, { message: "Comment deleted" });
+
+    const commentCount = await CommentModel.countDocuments({post:post.id});
+    expect(commentCount).toBe(0);
   });
 });

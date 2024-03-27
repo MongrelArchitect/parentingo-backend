@@ -3,6 +3,7 @@ import { Router } from "express";
 import commentsController from "@controllers/commentsController";
 
 import auth from "@middleware/auth";
+import comment from "@middleware/comments";
 import group from "@middleware/groups";
 import post from "@middleware/posts";
 
@@ -40,6 +41,17 @@ commentsRoutes.post(
   post.isValidPostId,
   post.checkAndAddToRequest,
   commentsController.postNewComment,
+);
+
+// DELETE a comment
+commentsRoutes.delete(
+  "/:commentId",
+  auth.isAuthenticated,
+  group.isValidGroupId,
+  group.checkAndAddToRequest,
+  comment.isValidCommentId,
+  comment.checkAndAddToRequest,
+  commentsController.deleteComment,
 );
 
 export default commentsRoutes;
