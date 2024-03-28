@@ -71,7 +71,7 @@ postsRoutes.patch(
   postsController.patchUnlikePost,
 );
 
-// DELETE for admin to remove a post
+// DELETE for admin or mod to remove a post
 postsRoutes.delete(
   "/:postId",
   auth.isAuthenticated,
@@ -79,7 +79,7 @@ postsRoutes.delete(
   group.checkAndAddToRequest,
   post.isValidPostId,
   post.checkAndAddToRequest,
-  group.checkIfGroupAdmin,
+  group.checkAllowedAndSetRole,
   postsController.deletePost,
 );
 

@@ -33,20 +33,44 @@ function makePostList(posts: Document[]): PostList {
 
 // DELETE a single post
 const deletePost = asyncHandler(async (req: CustomRequest, res: Response) => {
-  const { post } = req;
-  if (!post) {
+  const { group, post, role, user } = req;
+  if (!group) {
+    throw new Error("Error getting group info from database");
+  } else if (!post) {
     throw new Error("Error getting post info from database");
+  } else if (!role) {
+    throw new Error("Error setting authenticated user's role");
+  } else if (!user) {
+    throw new Error("Error deserializing authenticated user's info");
   } else {
-    try {
+    const authUser = user as UserInterface;
+
+    const userIsMod = role === "mod";
+    const authorIsAdmin = group.admin === post.author;
+    const authorIsMod = group.mods.includes(post.author);
+    const isOwnPost = post.author === authUser.id;
+
+    if (
+      // mod cannot delete an admin's post
+      (userIsMod && authorIsAdmin) ||
+      // mod cannot delete a mod's post (except their own)
+      (userIsMod && authorIsMod && !isOwnPost)
+    ) {
+      res
+        .status(403)
+        .json({ message: "Mod cannot delete posts by admin or another mod" });
+    } else {
+      try {
         // delete the post itself, then any of its comments
         await PostModel.findByIdAndDelete(post.id);
         await CommentModel.deleteMany({ post: post.id });
         res.status(200).json({ message: "Post deleted" });
-    } catch (err) {
-      res.status(500).json({
-        message: "Error deleting post",
-        error: err,
-      });
+      } catch (err) {
+        res.status(500).json({
+          message: "Error deleting post",
+          error: err,
+        });
+      }
     }
   }
 });

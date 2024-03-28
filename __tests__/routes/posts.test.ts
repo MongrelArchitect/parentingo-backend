@@ -22,8 +22,24 @@ beforeAll(async () => {
     .expect(200);
   // save cookie for future tests that require this user's session
   cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+  const noTreason = await UserModel.findOne({ username: "notreason" });
+  if (!noTreason) {
+    throw new Error("Error getting test user");
+  }
+  const generalGroup = await GroupModel.findOne({ name: "general" });
+  if (!generalGroup) {
+    throw new Error("Error getting test group");
+  }
+  try {
+    generalGroup.members.push(noTreason.id);
+    await generalGroup.save();
+  } catch (err) {
+    throw new Error("Error adding member to test group");
+  }
 });
 
+// postsController.postNewPost
 describe("POST /groups/:groupId/posts", () => {
   // XXX TODO XXX
   // need to test images...
@@ -134,6 +150,7 @@ describe("POST /groups/:groupId/posts", () => {
   });
 });
 
+// postsController.getGroupPosts
 describe("GET /groups/:groupId/posts/", () => {
   it("handles unauthenticated user", (done) => {
     supertest(app)
@@ -176,6 +193,7 @@ describe("GET /groups/:groupId/posts/", () => {
   });
 });
 
+// postsController.getSinglePost
 describe("GET /groups/:groupId/posts/:postId", () => {
   it("handles unauthenticated user", (done) => {
     supertest(app)
@@ -244,6 +262,7 @@ describe("GET /groups/:groupId/posts/:postId", () => {
   });
 });
 
+// postsController.patchLikePost
 describe("PATCH /groups/:groupId/posts/:postId/like", () => {
   it("handles unauthenticated user", (done) => {
     supertest(app)
@@ -399,6 +418,7 @@ describe("PATCH /groups/:groupId/posts/:postId/like", () => {
   });
 });
 
+// postsController.patchUnlikePost
 describe("PATCH /groups/:groupId/posts/:postId/unlike", () => {
   it("handles unauthenticated user", (done) => {
     supertest(app)
@@ -554,6 +574,7 @@ describe("PATCH /groups/:groupId/posts/:postId/unlike", () => {
   });
 });
 
+// postsController.getPostCount
 describe("GET /groups/:groupId/posts/count", () => {
   it("handles unauthenticated user", (done) => {
     supertest(app)
@@ -593,6 +614,7 @@ describe("GET /groups/:groupId/posts/count", () => {
   });
 });
 
+// postsController.deletePost
 describe("DELETE /groups/:groupId/posts/:postId", () => {
   it("handles unauthenticated user", (done) => {
     supertest(app)
@@ -644,7 +666,7 @@ describe("DELETE /groups/:groupId/posts/:postId", () => {
       });
   });
 
-  it("handles non-admin making the request", async () => {
+  it("handles non-admin or non-mod making the request", async () => {
     // need a non-admin user
     const res = await supertest(app)
       .post("/users/login")
@@ -669,7 +691,9 @@ describe("DELETE /groups/:groupId/posts/:postId", () => {
     await supertest(app)
       .delete(`/groups/${group.id}/posts/${post.id}`)
       .set("Cookie", cookieControl.getCookie())
-      .expect(403, { message: "Only group admin can make this request" });
+      .expect(403, {
+        message: "Only group admin or mod can make this request",
+      });
   });
 
   it("deletes post and its comments", async () => {
@@ -732,5 +756,161 @@ describe("DELETE /groups/:groupId/posts/:postId", () => {
       post: post.id,
     });
     expect(commentCountAfter).toBe(0);
+  });
+
+  it("prevents mod from deleting admin's post", async () => {
+    // first make a post by admin
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+
+    const result = await supertest(app)
+      .post(`/groups/${group.id}/posts/`)
+      .set("Cookie", cookieControl.getCookie())
+      .type("form")
+      .send({
+        text: "this is the post",
+        title: "my post",
+      })
+      .expect("Content-Type", /json/)
+      .expect(201);
+
+    postId = result.body.id;
+    const post = await PostModel.findById(postId);
+    expect(post).toBeTruthy();
+
+    // then login as mod
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "moddy",
+        password: "ImAMod123#",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+    // now try deleting the admin's post
+    await supertest(app)
+      .delete(`/groups/${group.id}/posts/${postId}`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(403, {
+        message: "Mod cannot delete posts by admin or another mod",
+      });
+  });
+
+  it("prevents mod from deleting another mod's post", async () => {
+    // first make a post by our logged-in mod
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+
+    const result = await supertest(app)
+      .post(`/groups/${group.id}/posts/`)
+      .set("Cookie", cookieControl.getCookie())
+      .type("form")
+      .send({
+        text: "post by a mod",
+        title: "mod post",
+      })
+      .expect("Content-Type", /json/)
+      .expect(201);
+
+    postId = result.body.id;
+    const post = await PostModel.findById(postId);
+    expect(post).toBeTruthy();
+
+    // now we need to promote another member to mod
+    const noTreason = await UserModel.findOne({ username: "notreason" });
+    if (!noTreason) {
+      throw new Error("Error getting test user");
+    }
+    try {
+      group.mods.push(noTreason.id);
+      await group.save();
+    } catch (err) {
+      throw new Error("Error promoting test member to mod of test group");
+    }
+
+    // then login as that newly promoted mod
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "notreason",
+        password: "NoAuthority68!",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+    // now try deleting the other mod's post
+    await supertest(app)
+      .delete(`/groups/${group.id}/posts/${postId}`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(403, {
+        message: "Mod cannot delete posts by admin or another mod",
+      });
+  });
+
+  it("allows mod to delete a member's post", async () => {
+    // first let's demote a mod to member
+    const noTreason = await UserModel.findOne({ username: "notreason" });
+    if (!noTreason) {
+      throw new Error("Error getting test user");
+    }
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+
+    try {
+      group.mods.splice(group.mods.indexOf(noTreason.id), 1);
+      await group.save();
+    } catch (err) {
+      throw new Error("Error demoting test mod");
+    }
+
+    // we're still logged in as this newly demoted member, so make a post
+    const result = await supertest(app)
+      .post(`/groups/${group.id}/posts/`)
+      .set("Cookie", cookieControl.getCookie())
+      .type("form")
+      .send({
+        text: "post by a member",
+        title: "member post",
+      })
+      .expect("Content-Type", /json/)
+      .expect(201);
+
+    postId = result.body.id;
+    const post = await PostModel.findById(postId);
+    expect(post).toBeTruthy();
+
+    // then login as another mod
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "moddy",
+        password: "ImAMod123#",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+    // now try deleting the post
+    await supertest(app)
+      .delete(`/groups/${group.id}/posts/${postId}`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(200, {
+        message: "Post deleted",
+      });
   });
 });
