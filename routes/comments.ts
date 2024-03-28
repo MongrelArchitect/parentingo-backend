@@ -51,7 +51,7 @@ commentsRoutes.delete(
   group.checkAndAddToRequest,
   comment.isValidCommentId,
   comment.checkAndAddToRequest,
-  group.checkIfGroupAdmin,
+  group.checkAllowedAndSetRole,
   commentsController.deleteComment,
 );
 

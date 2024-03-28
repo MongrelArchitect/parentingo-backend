@@ -29,21 +29,46 @@ function makeCommentsList(comments: Document[]): CommentList {
 // DELETE a single comment
 const deleteComment = asyncHandler(
   async (req: CustomRequest, res: Response) => {
-    const { comment, group } = req;
+    const { comment, group, role, user } = req;
     if (!group) {
       throw new Error("Error getting group info from database");
     } else if (!comment) {
       throw new Error("Error getting comment info from database");
+    } else if (!role) {
+      throw new Error("Error setting authenticated user's role");
+    } else if (!user) {
+      throw new Error("Error deserializing authenticated user's info");
     } else {
-      try {
-        // delete the post itself, then any of its comments
-        await CommentModel.findByIdAndDelete(comment.id);
-        res.status(200).json({ message: "Comment deleted" });
-      } catch (err) {
-        res.status(500).json({
-          message: "Error deleting comment",
-          error: err,
-        });
+      const authUser = user as UserInterface;
+
+      const userIsMod = role === "mod";
+      const authorIsAdmin = group.admin === comment.author;
+      const authorIsMod = group.mods.includes(comment.author);
+      const isOwnComment = comment.author === authUser.id;
+      // we're not allowing mods to delete certain comments directly, but they
+      // can still potentially delete the post itself (including its comments)
+      if (
+        // mod cannot delete an admin's comment
+        (userIsMod && authorIsAdmin) ||
+        // mod cannot delete a mod's comment (except their own)
+        (userIsMod && authorIsMod && !isOwnComment)
+      ) {
+        res
+          .status(403)
+          .json({
+            message: "Mod cannot delete comments by admin or another mod",
+          });
+      } else {
+        try {
+          // delete comments
+          await CommentModel.findByIdAndDelete(comment.id);
+          res.status(200).json({ message: "Comment deleted" });
+        } catch (err) {
+          res.status(500).json({
+            message: "Error deleting comment",
+            error: err,
+          });
+        }
       }
     }
   },

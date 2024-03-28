@@ -5,6 +5,7 @@ import cookieControl from "../config/session";
 import CommentModel from "@models/comment";
 import GroupModel from "@models/group";
 import PostModel from "@models/post";
+import UserModel from "@models/user";
 
 beforeAll(async () => {
   // need a user
@@ -19,8 +20,28 @@ beforeAll(async () => {
     .expect(200);
   // save cookie for future tests that require this user's session
   cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+  const noTreason = await UserModel.findOne({ username: "notreason" });
+  if (!noTreason) {
+    throw new Error("Error getting test user");
+  }
+
+  const generalGroup = await GroupModel.findOne({ name: "general" });
+  if (!generalGroup) {
+    throw new Error("Error getting test group");
+  }
+
+  try {
+    // add this user to our group as mod for testing permitted actions
+    generalGroup.members.push(noTreason.id);
+    generalGroup.mods.push(noTreason.id);
+    await generalGroup.save();
+  } catch (err) {
+    throw new Error("Error adding member to test group");
+  }
 });
 
+// commentsController.postNewComment
 describe("POST /groups/:groupId/posts/:postId/comments/", () => {
   it("handles unauthenticated user", (done) => {
     supertest(app)
@@ -168,6 +189,7 @@ describe("POST /groups/:groupId/posts/:postId/comments/", () => {
   });
 });
 
+// commentsController.getCommentCount
 describe("GET /groups/:groupId/posts/:postId/comments/count", () => {
   it("handles unauthenticated user", (done) => {
     supertest(app)
@@ -238,6 +260,7 @@ describe("GET /groups/:groupId/posts/:postId/comments/count", () => {
   });
 });
 
+// commentsController.getAllComments
 describe("GET /groups/:groupId/posts/:postId/comments", () => {
   it("handles unauthenticated user", (done) => {
     supertest(app)
@@ -309,6 +332,7 @@ describe("GET /groups/:groupId/posts/:postId/comments", () => {
   });
 });
 
+// commentsController.deleteComment
 describe("DELETE /groups/:groupId/posts/:postId/comments/:commentId", () => {
   it("handles unauthenticated user", (done) => {
     supertest(app)
@@ -349,14 +373,14 @@ describe("DELETE /groups/:groupId/posts/:postId/comments/:commentId", () => {
       });
   });
 
-  it("handles non-admin making the request", async () => {
+  it("handles non-admin or mod making the request", async () => {
     // need a non-admin user
     const res = await supertest(app)
       .post("/users/login")
       .type("form")
       .send({
-        username: "notreason",
-        password: "NoAuthority68!",
+        username: "imbanned",
+        password: "ImBanned123#",
       })
       .expect("Content-Type", /json/)
       .expect(200);
@@ -379,10 +403,46 @@ describe("DELETE /groups/:groupId/posts/:postId/comments/:commentId", () => {
     await supertest(app)
       .delete(`/groups/${group.id}/posts/${post.id}/comments/${comment.id}`)
       .set("Cookie", cookieControl.getCookie())
-      .expect(403, { message: "Only group admin can make this request" });
+      .expect(403, {
+        message: "Only group admin or mod can make this request",
+      });
   });
 
-  it("deletes comment", async () => {
+  it("prevents mod from deleting comment by admin", async () => {
+    // need mod user
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "moddy",
+        password: "ImAMod123#",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const post = await PostModel.findOne({ group: group.id });
+    if (!post) {
+      throw new Error("Error finding test post");
+    }
+    const comment = await CommentModel.findOne({ post: post.id });
+    if (!comment) {
+      throw new Error("Error finding test comment");
+    }
+    await supertest(app)
+      .delete(`/groups/${group.id}/posts/${post.id}/comments/${comment.id}`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(403, {
+        message: "Mod cannot delete comments by admin or another mod",
+      });
+  });
+
+  it("allows admin to delete a comment", async () => {
     // need admin user
     const res = await supertest(app)
       .post("/users/login")
@@ -404,7 +464,7 @@ describe("DELETE /groups/:groupId/posts/:postId/comments/:commentId", () => {
     if (!post) {
       throw new Error("Error finding test post");
     }
-    const comment = await CommentModel.findOne({});
+    const comment = await CommentModel.findOne({ post: post.id });
     if (!comment) {
       throw new Error("Error finding test comment");
     }
@@ -413,7 +473,109 @@ describe("DELETE /groups/:groupId/posts/:postId/comments/:commentId", () => {
       .set("Cookie", cookieControl.getCookie())
       .expect(200, { message: "Comment deleted" });
 
-    const commentCount = await CommentModel.countDocuments({post:post.id});
+    const commentCount = await CommentModel.countDocuments({ post: post.id });
+    expect(commentCount).toBe(0);
+  });
+
+  it("prevents mod from deleting comment by another mod", async () => {
+    // first need mod user
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "moddy",
+        password: "ImAMod123#",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+    // now make a comment
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const post = await PostModel.findOne({ group: group.id });
+    if (!post) {
+      throw new Error("Error finding test post");
+    }
+    await supertest(app)
+      .post(`/groups/${group.id}/posts/${post.id}/comments`)
+      .set("Cookie", cookieControl.getCookie())
+      .type("form")
+      .send({
+        text: "comment here",
+      })
+      .expect("Content-Length", "148")
+      .expect(200);
+
+    const comments = await CommentModel.find();
+    expect(comments.length).toBe(1);
+
+    // now need a different mod user
+    const resTwo = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "notreason",
+        password: "NoAuthority68!",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(resTwo.headers["set-cookie"][0].split(";")[0]);
+
+    // now try to delete the other mod's comment
+    const comment = await CommentModel.findOne({ post: post.id });
+    if (!comment) {
+      throw new Error("Error finding test comment");
+    }
+    await supertest(app)
+      .delete(`/groups/${group.id}/posts/${post.id}/comments/${comment.id}`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(403, {
+        message: "Mod cannot delete comments by admin or another mod",
+      });
+  });
+
+  it("allows mod to delete a member's comment", async () => {
+    // first demote a mod
+    const generalGroup = await GroupModel.findOne({ name: "general" });
+    if (!generalGroup) {
+      throw new Error("Error getting test group");
+    }
+    const modUser = await UserModel.findOne({ username: "moddy" });
+    if (!modUser) {
+      throw new Error("Error getting test user");
+    }
+    try {
+      // add this user to our group as mod for testing permitted actions
+      generalGroup.mods.splice(generalGroup.mods.indexOf(modUser.id), 1);
+      await generalGroup.save();
+    } catch (err) {
+      throw new Error("Error demoting test user");
+    }
+
+    // now try to delete the demoted member's comment
+    const post = await PostModel.findOne({ group: generalGroup.id });
+    if (!post) {
+      throw new Error("Error finding test post");
+    }
+    const comment = await CommentModel.findOne({ post: post.id });
+    if (!comment) {
+      throw new Error("Error finding test comment");
+    }
+    await supertest(app)
+      .delete(
+        `/groups/${generalGroup.id}/posts/${post.id}/comments/${comment.id}`,
+      )
+      .set("Cookie", cookieControl.getCookie())
+      .expect(200, {
+        message: "Comment deleted",
+      });
+
+    const commentCount = await CommentModel.countDocuments({ post: post.id });
     expect(commentCount).toBe(0);
   });
 });
