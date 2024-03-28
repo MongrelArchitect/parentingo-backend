@@ -10,5 +10,6 @@ export default interface CustomRequest extends Request {
   comment?: Document<unknown, {}, CommentInterface> & CommentInterface;
   group?: Document<unknown, {}, GroupInterface> & GroupInterface;
   post?: Document<unknown, {}, PostInterface> & PostInterface;
+  role?: "admin" | "mod";
   userDocument?: Document<unknown, {}, UserInterface> & UserInterface;
 }

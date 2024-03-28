@@ -12,6 +12,7 @@ function getLongString(num: number) {
   return string;
 }
 
+// groupsController.getOwnedGroups
 describe("GET /groups/owned", () => {
   it("handles unauthenticated user", (done) => {
     supertest(app)
@@ -58,11 +59,12 @@ describe("GET /groups/owned", () => {
       .get("/groups/owned")
       .set("Cookie", cookieControl.getCookie())
       .expect("Content-Type", /json/)
-      .expect("Content-Length", "337")
+      .expect("Content-Length", "364")
       .expect(200);
   });
 });
 
+// groupsController.getGroupInfo
 describe("GET /groups/:groupId", () => {
   it("handles unauthenticated user", (done) => {
     supertest(app)
@@ -98,11 +100,12 @@ describe("GET /groups/:groupId", () => {
     await supertest(app)
       .get(`/groups/${group.id}/`)
       .set("Cookie", cookieControl.getCookie())
-      .expect("Content-Length", "301")
+      .expect("Content-Length", "328")
       .expect(200);
   });
 });
 
+// groupsController.postNewGroup
 describe("POST /groups", () => {
   it("handles unauthenticated user", (done) => {
     supertest(app)
@@ -191,7 +194,7 @@ describe("POST /groups", () => {
         description: "this is just a test",
       })
       .expect("Content-Type", /json/)
-      .expect("Content-Length", "260")
+      .expect("Content-Length", "234")
       .expect(201, done);
   });
 
@@ -224,6 +227,7 @@ describe("POST /groups", () => {
   });
 });
 
+// groupsController.patchNewMember
 describe("PATCH /groups/:groupId/members", () => {
   it("handles unauthenticated user", async () => {
     const group = await GroupModel.findOne({ name: "general" });
@@ -282,7 +286,7 @@ describe("PATCH /groups/:groupId/members", () => {
     if (!group) {
       throw new Error("Error finding test group");
     }
-    expect(group.members.length).toBe(2);
+    expect(group.members.length).toBe(3);
   });
 
   it("handles user already in group", async () => {
@@ -290,7 +294,7 @@ describe("PATCH /groups/:groupId/members", () => {
     if (!group) {
       throw new Error("Error finding test group");
     }
-    expect(group.members.length).toBe(2);
+    expect(group.members.length).toBe(3);
     await supertest(app)
       .patch(`/groups/${group.id}/members`)
       .set("Cookie", cookieControl.getCookie())
@@ -326,6 +330,7 @@ describe("PATCH /groups/:groupId/members", () => {
   });
 });
 
+// groupsController.getMemberGroups
 describe("GET /groups/member", () => {
   it("handles unauthenticated user", (done) => {
     supertest(app)
@@ -373,6 +378,7 @@ describe("GET /groups/member", () => {
   });
 });
 
+// groupsController.patchNewMod
 describe("PATCH /groups/:groupId/mods/:userId", () => {
   it("handles unauthenticated user", (done) => {
     supertest(app)
@@ -504,6 +510,7 @@ describe("PATCH /groups/:groupId/mods/:userId", () => {
   });
 });
 
+// groupsController.deleteFromMods
 describe("PATCH /groups/:groupId/mods/demote/:userId", () => {
   it("handles unauthenticated user", (done) => {
     supertest(app)
@@ -633,6 +640,7 @@ describe("PATCH /groups/:groupId/mods/demote/:userId", () => {
   });
 });
 
+// groupsController.patchLeaveGroup
 describe("PATCH /groups/:groupId/leave", () => {
   it("handles unauthenticated user", (done) => {
     supertest(app)
@@ -690,7 +698,7 @@ describe("PATCH /groups/:groupId/leave", () => {
     if (!user) {
       throw new Error("Error finding test user");
     }
-    expect(group.members.length).toBe(1);
+    expect(group.members.length).toBe(2);
     expect(group.members.includes(user.id)).toBeFalsy();
   });
 
@@ -824,6 +832,7 @@ describe("PATCH /groups/:groupId/leave", () => {
   });
 });
 
+// groupsController.patchBanUser
 describe("PATCH /groups/:groupId/ban/:userId", () => {
   it("handles unauthenticated user", (done) => {
     supertest(app)
@@ -864,7 +873,7 @@ describe("PATCH /groups/:groupId/ban/:userId", () => {
       });
   });
 
-  it("handles non-admin making the request", async () => {
+  it("handles non-admin or non-mod making the request", async () => {
     // need a non-admin user
     const res = await supertest(app)
       .post("/users/login")
@@ -889,11 +898,13 @@ describe("PATCH /groups/:groupId/ban/:userId", () => {
     await supertest(app)
       .patch(`/groups/${group.id}/ban/${user.id}`)
       .set("Cookie", cookieControl.getCookie())
-      .expect(403, { message: "Only group admin can make this request" });
+      .expect(403, {
+        message: "Only group admin or mod can make this request",
+      });
   });
 
   it("denies request if user is not a group member", async () => {
-    // need a non-admin user
+    // need admin user
     const res = await supertest(app)
       .post("/users/login")
       .type("form")
@@ -920,7 +931,7 @@ describe("PATCH /groups/:groupId/ban/:userId", () => {
       .expect(400, { message: "Only group members can be banned" });
   });
 
-  it("won't allow admin to ban themselves", async () => {
+  it("won't allow admin to be banned from their own group", async () => {
     const group = await GroupModel.findOne({ name: "general" });
     if (!group) {
       throw new Error("Error finding test group");
@@ -932,7 +943,7 @@ describe("PATCH /groups/:groupId/ban/:userId", () => {
     await supertest(app)
       .patch(`/groups/${group.id}/ban/${user.id}`)
       .set("Cookie", cookieControl.getCookie())
-      .expect(403, { message: "Admin cannot ban themselves" });
+      .expect(403, { message: "Admin cannot be banned from their own group" });
   });
 
   it("removes and bans member from group", async () => {
@@ -958,7 +969,21 @@ describe("PATCH /groups/:groupId/ban/:userId", () => {
       });
   });
 
-  it("removes and bans mods from group", async () => {
+  it("prevents mod from banning other mods", async () => {
+    // XXX
+    // need mod user
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "moddy",
+        password: "ImAMod123#",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
     const group = await GroupModel.findOne({ name: "general" });
     if (!group) {
       throw new Error("Error finding test group");
@@ -981,6 +1006,35 @@ describe("PATCH /groups/:groupId/ban/:userId", () => {
     await supertest(app)
       .patch(`/groups/${group.id}/ban/${user.id}`)
       .set("Cookie", cookieControl.getCookie())
+      .expect(403, {
+        message: "Only admin can ban mods",
+      });
+  });
+
+  it("admin removes and bans mods from group", async () => {
+    // need admin user
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "praxman",
+        password: "HumanAction123$",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const user = await UserModel.findOne({ username: "notreason" });
+    if (!user) {
+      throw new Error("Error finding test user");
+    }
+    await supertest(app)
+      .patch(`/groups/${group.id}/ban/${user.id}`)
+      .set("Cookie", cookieControl.getCookie())
       .expect(200, {
         message: `${user.username} removed and banned from ${group.name} group`,
       });
@@ -997,13 +1051,14 @@ describe("PATCH /groups/:groupId/ban/:userId", () => {
     }
     expect(group.banned.length).toBe(2);
     expect(group.banned.includes(user.id)).toBeTruthy();
-    expect(group.members.length).toBe(1);
+    expect(group.members.length).toBe(2);
     expect(group.members.includes(user.id)).toBeFalsy();
     expect(group.mods.length).toBe(1);
     expect(group.mods.includes(user.id)).toBeFalsy();
   });
 });
 
+// groupsController.patchUnbanUser
 describe("PATCH /groups/:groupId/unban/:userId", () => {
   it("handles unauthenticated user", (done) => {
     supertest(app)
@@ -1044,7 +1099,7 @@ describe("PATCH /groups/:groupId/unban/:userId", () => {
       });
   });
 
-  it("handles non-admin making the request", async () => {
+  it("handles non-admin or non-mod making the request", async () => {
     // need a non-admin user
     const res = await supertest(app)
       .post("/users/login")
@@ -1069,7 +1124,9 @@ describe("PATCH /groups/:groupId/unban/:userId", () => {
     await supertest(app)
       .patch(`/groups/${group.id}/unban/${user.id}`)
       .set("Cookie", cookieControl.getCookie())
-      .expect(403, { message: "Only group admin can make this request" });
+      .expect(403, {
+        message: "Only group admin or mod can make this request",
+      });
   });
 
   it("successfully unbans user", async () => {
@@ -1133,6 +1190,7 @@ describe("PATCH /groups/:groupId/unban/:userId", () => {
   });
 });
 
+// groupsController.getAllGroups
 describe("GET /groups", () => {
   it("handles unauthenticated user", (done) => {
     supertest(app)
@@ -1146,7 +1204,7 @@ describe("GET /groups", () => {
       .get("/groups/")
       .set("Cookie", cookieControl.getCookie())
       .expect("Content-Type", /json/)
-      .expect("Content-Length", "573")
+      .expect("Content-Length", "574")
       .expect(200, done);
   });
 });

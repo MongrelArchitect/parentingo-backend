@@ -81,7 +81,7 @@ groupsRoutes.patch(
   groupsController.patchLeaveGroup,
 );
 
-// PATCH for an admin to remove a user & ban them from joining the group
+// PATCH to remove a user & ban them from joining the group
 groupsRoutes.patch(
   "/:groupId/ban/:userId",
   auth.isAuthenticated,
@@ -89,11 +89,11 @@ groupsRoutes.patch(
   group.checkAndAddToRequest,
   user.isValidUserId,
   user.exists,
-  group.checkIfGroupAdmin,
+  group.checkAllowedAndSetRole,
   groupsController.patchBanUser,
 );
 
-// PATCH for an admin to unban a previously banned user
+// PATCH to unban a previously banned user
 groupsRoutes.patch(
   "/:groupId/unban/:userId",
   auth.isAuthenticated,
@@ -101,7 +101,7 @@ groupsRoutes.patch(
   group.checkAndAddToRequest,
   user.isValidUserId,
   user.exists,
-  group.checkIfGroupAdmin,
+  group.checkAllowedAndSetRole,
   groupsController.patchUnbanUser,
 );
 

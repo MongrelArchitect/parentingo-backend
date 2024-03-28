@@ -166,13 +166,15 @@ const getOwnedGroups = [
 const patchBanUser = asyncHandler(async (req: CustomRequest, res: Response) => {
   // "user" is the currently authenticated user
   // "userDocument" is the mongoose document of the user we're banning
-  const { group, user, userDocument } = req;
+  const { group, role, user, userDocument } = req;
   if (!group) {
     throw new Error("Error getting group info from database");
   } else if (!userDocument) {
     throw new Error("Error getting user's info from database");
   } else if (!user) {
     throw new Error("Error deserializing authenticated user's info");
+  } else if (!role) {
+    throw new Error("Error setting authenticated user's role");
   } else {
     try {
       const authUser = user as UserInterface;
@@ -182,19 +184,28 @@ const patchBanUser = asyncHandler(async (req: CustomRequest, res: Response) => {
           message: "Only group members can be banned",
         });
       } else if (authUser.id === userDocument.id) {
-        // admin can't ban themselves
-        res.status(403).json({ message: "Admin cannot ban themselves" });
+        // admin can't be banned from their own group
+        res
+          .status(403)
+          .json({ message: "Admin cannot be banned from their own group" });
       } else {
-        // admin = go for it
-        group.members.splice(group.members.indexOf(userDocument.id), 1);
-        group.banned.push(userDocument.id);
-        if (group.mods.includes(userDocument.id)) {
-          group.mods.splice(group.mods.indexOf(userDocument.id), 1);
+        // check if a mod is trying to ban another mod
+        const banneeIsMod = group.mods.includes(userDocument.id);
+        if (banneeIsMod && role !== "admin") {
+          res.status(403).json({ message: "Only admin can ban mods" });
+        } else {
+          // good to go
+          group.members.splice(group.members.indexOf(userDocument.id), 1);
+          group.banned.push(userDocument.id);
+          if (banneeIsMod) {
+            // we've got an admin so this is allowed
+            group.mods.splice(group.mods.indexOf(userDocument.id), 1);
+          }
+          await group.save();
+          res.status(200).json({
+            message: `${userDocument.username} removed and banned from ${group.name} group`,
+          });
         }
-        await group.save();
-        res.status(200).json({
-          message: `${userDocument.username} removed and banned from ${group.name} group`,
-        });
       }
     } catch (err) {
       res.status(500).json({
@@ -398,8 +409,8 @@ const postNewGroup = [
           admin: userInfo.id, // user who creates the group is the admin
           name: data.name,
           description: data.description,
-          mods: [userInfo.id], // admin is also a mod
-          members: [userInfo.id], // admins and mods are also members
+          mods: [],
+          members: [userInfo.id], // admins is also a member
           id: "",
           banned: [],
         };

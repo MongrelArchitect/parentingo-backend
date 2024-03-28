@@ -59,13 +59,29 @@ beforeAll(async () => {
     bannedUser.id = bannedUser._id.toString();
     await bannedUser.save();
 
-    // add a "general" group for which "praxman" is the admin
+    // add a user that will be a mod of the "general" group
+    const modPass = await bcrypt.hash("ImAMod123#", 10);
+    const modInfo: UserInterface = {
+      email: "mod@mod.com",
+      followers: [],
+      following: [],
+      id: "",
+      lastLogin: new Date(),
+      password: modPass,
+      name: "Ima Mod",
+      username: "moddy",
+    };
+    const modUser = new UserModel(modInfo);
+    modUser.id = modUser._id.toString();
+    await modUser.save();
+
+    // add a "general" group for which "praxman" is the admin & "moddy" is a mod
     const groupInfo: GroupInterface = {
       name: "general",
       description: "For general discussion about anything and everything",
       admin: newUser.id,
-      mods: [newUser.id],
-      members: [newUser.id],
+      mods: [modUser.id],
+      members: [newUser.id, modUser.id],
       id: "",
       banned: [bannedUser.id],
     };
