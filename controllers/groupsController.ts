@@ -184,10 +184,10 @@ const patchBanUser = asyncHandler(async (req: CustomRequest, res: Response) => {
           message: "Only group members can be banned",
         });
       } else if (authUser.id === userDocument.id) {
-        // admin can't be banned from their own group
+        // admin or mod can't ban themselves
         res
           .status(403)
-          .json({ message: "Admin cannot be banned from their own group" });
+          .json({ message: "Admins and mods cannot ban themselves" });
       } else {
         // check if a mod is trying to ban another mod
         const banneeIsMod = group.mods.includes(userDocument.id);

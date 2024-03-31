@@ -943,7 +943,7 @@ describe("PATCH /groups/:groupId/ban/:userId", () => {
     await supertest(app)
       .patch(`/groups/${group.id}/ban/${user.id}`)
       .set("Cookie", cookieControl.getCookie())
-      .expect(403, { message: "Admin cannot be banned from their own group" });
+      .expect(403, { message: "Admins and mods cannot ban themselves" });
   });
 
   it("removes and bans member from group", async () => {
