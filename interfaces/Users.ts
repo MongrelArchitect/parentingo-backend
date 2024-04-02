@@ -1,5 +1,7 @@
 export default interface UserInterface {
   avatar?: string;
+  bio?: string;
+  created: Date;
   email: string; // unique, 255 chars max
   followers: string[];
   following: string[];

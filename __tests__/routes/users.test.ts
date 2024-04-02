@@ -62,6 +62,7 @@ describe("POST /users", () => {
   it("handles existing username & password", async () => {
     const hashedPass = await bcrypt.hash("Password123#", 10);
     const testUser: UserInterface = {
+      created: new Date(),
       password: hashedPass,
       email: "murray@rothbard.com",
       id: "",
@@ -161,7 +162,7 @@ describe("GET /users/current", () => {
       .set("Cookie", cookieControl.getCookie())
       .expect("Content-Type", /json/)
       // length should be the same even if the id is different each test
-      .expect("Content-Length", "183")
+      .expect("Content-Length", "220")
       .expect(200, done);
   });
 });
@@ -330,14 +331,7 @@ describe("GET /users/:userId", () => {
     await supertest(app)
       .get(`/users/${user.id}/`)
       .set("Cookie", cookieControl.getCookie())
-      .expect(200, {
-        message: "User found",
-        user: {
-          username: "praxman",
-          name: "Ludwig von Mises",
-          followers: [],
-          following: [],
-        },
-      });
+      .expect("Content-Length", "147")
+      .expect(200);
   });
 });

@@ -92,6 +92,7 @@ const createNewUser = [
       const hashedPass = await bcrypt.hash(data.password, 10);
 
       const userInfo: UserInterface = {
+        created: new Date(),
         email: data.email,
         followers: [],
         following: [],
@@ -141,7 +142,7 @@ const getCurrentUser = asyncHandler(async (req, res) => {
   }
 });
 
-// GET public info about a particular user (username & real name)
+// GET public info about a particular user
 const getUserInfo = asyncHandler(async (req: CustomRequest, res) => {
   const { userDocument } = req;
   if (!userDocument) {
@@ -150,10 +151,13 @@ const getUserInfo = asyncHandler(async (req: CustomRequest, res) => {
     res.status(200).json({
       message: "User found",
       user: {
+        avatar: userDocument.avatar,
+        bio: userDocument.bio,
         username: userDocument.username,
         name: userDocument.name,
         followers: userDocument.followers,
         following: userDocument.following,
+        created: userDocument.created,
       },
     });
   }

@@ -45,7 +45,9 @@ export default function setupPassport() {
           return done(null, false);
         } else {
           const userInfo: UserInterface = {
+            created: user.created,
             avatar: user.avatar,
+            bio: user.bio,
             email: user.email,
             followers: user.followers,
             following: user.following,

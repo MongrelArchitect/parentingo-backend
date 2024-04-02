@@ -14,6 +14,7 @@ beforeAll(async () => {
     // add a user so we can test group operations
     const hashedPass = await bcrypt.hash("HumanAction123$", 10);
     const userInfo: UserInterface = {
+      created: new Date(),
       email: "ludwig@mises.org",
       followers: [],
       following: [],
@@ -30,6 +31,7 @@ beforeAll(async () => {
     // add another user to test group operations
     const userPass = await bcrypt.hash("NoAuthority68!", 10);
     const secondUserInfo: UserInterface = {
+      created: new Date(),
       email: "lysander@mises.org",
       followers: [],
       following: [],
@@ -46,6 +48,7 @@ beforeAll(async () => {
     // add a user that will be banned from the "general" group
     const bannedPass = await bcrypt.hash("ImBanned123#", 10);
     const bannedInfo: UserInterface = {
+      created: new Date(),
       email: "bad@banned.com",
       followers: [],
       following: [],
@@ -62,6 +65,7 @@ beforeAll(async () => {
     // add a user that will be a mod of the "general" group
     const modPass = await bcrypt.hash("ImAMod123#", 10);
     const modInfo: UserInterface = {
+      created: new Date(),
       email: "mod@mod.com",
       followers: [],
       following: [],
