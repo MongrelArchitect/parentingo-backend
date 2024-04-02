@@ -15,6 +15,7 @@ const validUser = {
   username: "testyman",
 };
 
+// usersController.createNewUser
 describe("POST /users", () => {
   it("handles no form data", (done) => {
     supertest(app)
@@ -145,6 +146,7 @@ describe("POST /users", () => {
   });
 });
 
+// usersController.getCurrentUser
 describe("GET /users/current", () => {
   it("handles unauthenticated user", (done) => {
     supertest(app)
@@ -164,6 +166,7 @@ describe("GET /users/current", () => {
   });
 });
 
+// usersController.logoutUser
 describe("POST /users/logout", () => {
   it("handles attempt without authenticated user", (done) => {
     supertest(app).post("/users/logout").expect("Content-Type", /json/).expect(
@@ -190,6 +193,7 @@ describe("POST /users/logout", () => {
   });
 });
 
+// usersController.loginUser
 describe("POST /users/login", () => {
   it("handles missing form data", (done) => {
     supertest(app)
@@ -288,6 +292,7 @@ describe("POST /users/login", () => {
   });
 });
 
+// usersController.getUserInfo
 describe("GET /users/:userId", () => {
   it("handles unauthenticated user", async () => {
     const user = await UserModel.findOne({ username: "praxman" });
@@ -327,7 +332,12 @@ describe("GET /users/:userId", () => {
       .set("Cookie", cookieControl.getCookie())
       .expect(200, {
         message: "User found",
-        user: { username: "praxman", name: "Ludwig von Mises" },
+        user: {
+          username: "praxman",
+          name: "Ludwig von Mises",
+          followers: [],
+          following: [],
+        },
       });
   });
 });

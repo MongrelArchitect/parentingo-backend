@@ -152,6 +152,8 @@ const getUserInfo = asyncHandler(async (req: CustomRequest, res) => {
       user: {
         username: userDocument.username,
         name: userDocument.name,
+        followers: userDocument.followers,
+        following: userDocument.following,
       },
     });
   }
