@@ -1,4 +1,6 @@
 import bcrypt from "bcrypt";
+import fs from "fs";
+import path from "path";
 import supertest from "supertest";
 import app from "../../app";
 
@@ -333,5 +335,57 @@ describe("GET /users/:userId", () => {
       .set("Cookie", cookieControl.getCookie())
       .expect("Content-Length", "147")
       .expect(200);
+  });
+});
+
+// usersController.patchUpdateProfile
+describe("PATCH /users/current", () => {
+  it("handles unauthenticated user", async () => {
+    await supertest(app)
+      .patch("/users/current")
+      .expect(401, { message: "User authentication required" });
+  });
+
+  it("handles invalid form data", async () => {
+    await supertest(app)
+      .patch("/users/current")
+      .set("Cookie", cookieControl.getCookie())
+      .send({
+        name: "",
+      })
+      .expect("Content-Type", /json/)
+      .expect(400);
+  });
+
+  it("handles files that are too large", async () => {
+    const bigImagePath = path.join(__dirname, "../files/big.png");
+    await supertest(app)
+      .patch("/users/current")
+      .set("Cookie", cookieControl.getCookie())
+      .attach("avatar", bigImagePath)
+      .expect("Content-Type", /json/)
+      .expect(413, { message: "File too large (10MB max)" });
+  });
+
+  it("updates user info", async () => {
+    const imagePath = path.join(__dirname, "../files/small.jpg");
+    await supertest(app)
+      .patch("/users/current")
+      .set("Cookie", cookieControl.getCookie())
+      .attach("avatar", imagePath)
+      .field({
+        name: "New Name",
+        bio: "This is my bio info",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200, { message: "User info updated" });
+
+    const user = await UserModel.findOne({username: validUser.username});
+    if (!user) {
+      throw new Error("Error finding test user");
+    }
+    expect(user.name).toBe("New Name");
+    expect(user.bio).toBe("This is my bio info");
+    expect(user.avatar).toBeTruthy();
   });
 });

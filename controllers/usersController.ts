@@ -2,7 +2,14 @@ import bcrypt from "bcrypt";
 import { NextFunction, Response } from "express";
 import asyncHandler from "express-async-handler";
 import { body, matchedData, validationResult } from "express-validator";
+import { getDownloadURL } from "firebase-admin/storage";
+import fs from "fs";
+import multer from "multer";
 import passport from "passport";
+import path from "path";
+import sharp from "sharp";
+
+import { storageBucket } from "@configs/firebase";
 
 import CustomRequest from "@interfaces/CustomRequest";
 import UserInterface from "@interfaces/Users";
@@ -221,12 +228,146 @@ const logoutUser = asyncHandler(async (req, res) => {
   });
 });
 
+// for handling profile avatar uploads
+const avatarStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, path.join(__dirname, "../tmp/avatars"));
+  },
+});
+
+const upload = multer({
+  storage: avatarStorage,
+  limits: {
+    // 10 MB
+    fileSize: 10000000,
+    files: 1,
+    fields: 2,
+  },
+});
+
+// use if there's any errors or once we've uplodaed to cloud storage
+const deleteTempAvatar = (filePath: string) => {
+  fs.unlink(filePath, (err) => {
+    if (err) {
+      throw new Error(err.toString());
+    }
+  });
+};
+
+// PATCH for a user to update their profile info
+const patchUpdateProfile = [
+  upload.single("avatar"),
+
+  (err: Error, req: CustomRequest, res: Response, next: NextFunction) => {
+    if (err) {
+      res.status(413).json({ message: "File too large (10MB max)" });
+    } else {
+      next();
+    }
+  },
+
+  body("name")
+    .optional()
+    .trim()
+    .escape()
+    .isLength({ min: 1, max: 255 })
+    .withMessage("Name must be between 1-255 characters"),
+
+  body("bio")
+    .optional()
+    .trim()
+    .escape()
+    .isLength({ max: 20000 })
+    .withMessage("Bio cannot be more than 20,000 characters"),
+
+  (req: CustomRequest, res: Response, next: NextFunction) => {
+    const validationErrors = validationResult(req);
+    if (!validationErrors.isEmpty()) {
+      // need to delete any uploaded file since we won't be using it
+      if (req.file) {
+        deleteTempAvatar(req.file.path);
+      }
+      res.status(400).json({
+        message: "Invalid input - check each field for errors",
+        errors: validationErrors.mapped(),
+      });
+    } else {
+      next();
+    }
+  },
+
+  asyncHandler(async (req, res) => {
+    const { user } = req;
+    if (!user) {
+      // need to delete any uploaded file since we won't be using it
+      if (req.file) {
+        deleteTempAvatar(req.file.path);
+      }
+      throw new Error("Error deserializing authenticated user's info");
+    } else {
+      try {
+        const data = matchedData(req);
+        const authUser = user as UserInterface;
+        const userToUpdate = await UserModel.findById(authUser.id);
+        if (!userToUpdate) {
+          throw new Error("Error finding user in database");
+        } else {
+          // check & apply the fields we're updating
+          data.bio ? (userToUpdate.bio = data.bio) : null;
+          data.name ? (userToUpdate.name = data.name) : null;
+          if (req.file) {
+            // set all the paths we need
+            const resizedFilename = `${authUser.id}-avatar.webp`;
+            const resizedPath = path.join(
+              __dirname,
+              `../tmp/avatars/resized/${resizedFilename}`,
+            );
+            const storageDestination = `avatars/${resizedFilename}`;
+
+            // resize if needed & convert to webp format (old browsers be damned)
+            await sharp(req.file.path)
+              .webp({ quality: 80 })
+              .resize(480, 480, { fit: "inside", withoutEnlargement: true })
+              .toFile(resizedPath);
+
+            // upload to firebase
+            await storageBucket.upload(resizedPath, {
+              destination: storageDestination,
+            });
+
+            // delete both temp images
+            deleteTempAvatar(req.file.path);
+            deleteTempAvatar(resizedPath);
+
+            // get the download URL to update the user's database entry
+            const fileRef = storageBucket.file(storageDestination);
+            const downloadURL = await getDownloadURL(fileRef);
+            userToUpdate.avatar = downloadURL;
+          }
+
+          // save the user's info with whatever changes were made
+          await userToUpdate.save();
+          res.status(200).json({ message: "User info updated" });
+        }
+      } catch (err) {
+        if (req.file) {
+          deleteTempAvatar(req.file.path);
+        }
+        res
+          .status(500)
+          .json({ message: "Error updating user info", error: err });
+      }
+    }
+  }),
+];
+
 const usersController = {
   createNewUser,
   getCurrentUser,
   getUserInfo,
   loginUser,
   logoutUser,
+  patchUpdateProfile,
 };
 
 export default usersController;
