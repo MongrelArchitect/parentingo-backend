@@ -324,10 +324,10 @@ const patchUpdateProfile = [
             );
             const storageDestination = `avatars/${resizedFilename}`;
 
-            // resize if needed & convert to webp format (old browsers be damned)
+            // resize & convert to webp format (old browsers be damned)
             await sharp(req.file.path)
-              .webp({ quality: 80 })
-              .resize(480, 480, { fit: "inside", withoutEnlargement: true })
+              .webp({ quality: 90 })
+              .resize(600, 600)
               .toFile(resizedPath);
 
             // upload to firebase
