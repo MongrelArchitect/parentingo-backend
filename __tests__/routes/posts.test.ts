@@ -1,4 +1,6 @@
+import path from "path";
 import supertest from "supertest";
+
 import app from "../../app";
 import cookieControl from "../config/session";
 
@@ -41,8 +43,6 @@ beforeAll(async () => {
 
 // postsController.postNewPost
 describe("POST /groups/:groupId/posts", () => {
-  // XXX TODO XXX
-  // need to test images...
   it("handles unauthenticated user", (done) => {
     supertest(app)
       .post("/groups/123abc/posts")
@@ -148,6 +148,53 @@ describe("POST /groups/:groupId/posts", () => {
       .expect("Content-Length", "250")
       .expect(400);
   });
+
+  it("handles files that are too large", async () => {
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+
+    const imagePath = path.join(__dirname, "../files/big.png");
+    await supertest(app)
+      .post(`/groups/${group.id}/posts/`)
+      .set("Cookie", cookieControl.getCookie())
+      .attach("image", imagePath)
+      .field({
+        text: "this post has an image",
+        title: "image post",
+      })
+      .expect("Content-Type", /json/)
+      .expect(413, { message: "File too large (10MB max)" });
+  });
+
+  it("handles post with image", async () => {
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+
+    const imagePath = path.join(__dirname, "../files/small.jpg");
+    const resTwo = await supertest(app)
+      .post(`/groups/${group.id}/posts/`)
+      .set("Cookie", cookieControl.getCookie())
+      .attach("image", imagePath)
+      .field({
+        text: "this post has an image",
+        title: "image post",
+      })
+      .expect("Content-Type", /json/)
+      .expect(201);
+
+    postId = resTwo.body.id;
+    const post = await PostModel.findById(postId);
+    if (!post || !post.image) {
+      throw new Error("Error getting post with image");
+    }
+    expect(post && post.image).toBeTruthy();
+    const imageFetch = await fetch(post.image);
+    expect(imageFetch.status).toBe(200);
+  });
 });
 
 // postsController.getGroupPosts
@@ -188,7 +235,7 @@ describe("GET /groups/:groupId/posts/", () => {
     await supertest(app)
       .get(`/groups/${group.id}/posts`)
       .set("Cookie", cookieControl.getCookie())
-      .expect("Content-Length", "548")
+      .expect("Content-Length", "942")
       .expect(200);
   });
 });
@@ -610,7 +657,7 @@ describe("GET /groups/:groupId/posts/count", () => {
     await supertest(app)
       .get(`/groups/${group.id}/posts/count`)
       .set("Cookie", cookieControl.getCookie())
-      .expect(200, { message: "2 posts found", count: 2 });
+      .expect(200, { message: "3 posts found", count: 3 });
   });
 });
 
@@ -714,7 +761,10 @@ describe("DELETE /groups/:groupId/posts/:postId", () => {
     if (!group) {
       throw new Error("Error finding test group");
     }
-    const post = await PostModel.findOne({ group: group.id });
+    const post = await PostModel.findOne({
+      group: group.id,
+      image: { $exists: true },
+    });
     if (!post) {
       throw new Error("Error finding test post");
     }
@@ -749,7 +799,14 @@ describe("DELETE /groups/:groupId/posts/:postId", () => {
 
     // make sure our group now has correct number of posts
     const postCount = await PostModel.countDocuments({ group: group.id });
-    expect(postCount).toBe(1);
+    expect(postCount).toBe(2);
+
+    // make sure the image was deleted
+    // XXX
+    if (post.image) {
+      const fetchResponse = await fetch(post.image);
+      expect(fetchResponse.status).toBe(404);
+    }
 
     // make sure the post comment was also deleted
     const commentCountAfter = await CommentModel.countDocuments({

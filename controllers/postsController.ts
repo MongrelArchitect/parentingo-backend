@@ -1,7 +1,14 @@
 import { NextFunction, Response } from "express";
 import asyncHandler from "express-async-handler";
 import { body, matchedData, validationResult } from "express-validator";
+import { getDownloadURL } from "firebase-admin/storage";
+import fs from "fs";
 import { Document } from "mongoose";
+import multer from "multer";
+import path from "path";
+import sharp from "sharp";
+
+import { storageBucket } from "@configs/firebase";
 
 import CustomRequest from "@interfaces/CustomRequest";
 import PostInterface, { PostList } from "@interfaces/Posts";
@@ -61,8 +68,11 @@ const deletePost = asyncHandler(async (req: CustomRequest, res: Response) => {
         .json({ message: "Mod cannot delete posts by admin or another mod" });
     } else {
       try {
-        // delete the post itself, then any of its comments
+        // delete the post itself, its image & any of its comments
         await PostModel.findByIdAndDelete(post.id);
+        if (post.image) {
+          await storageBucket.file(`posts/${post.id}-image.webp`).delete();
+        }
         await CommentModel.deleteMany({ post: post.id });
         res.status(200).json({ message: "Post deleted" });
       } catch (err) {
@@ -190,8 +200,44 @@ const patchUnlikePost = asyncHandler(async (req: CustomRequest, res) => {
   }
 });
 
+// for handling post image uploads
+const imageStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, path.join(__dirname, "../tmp/posts"));
+  },
+});
+
+const upload = multer({
+  storage: imageStorage,
+  limits: {
+    // 10 MB
+    fileSize: 10000000,
+    files: 1,
+    fields: 2,
+  },
+});
+
+// use if there's any errors or once we've uplodaed to cloud storage
+const deleteTempImage = (filePath: string) => {
+  fs.unlink(filePath, (err) => {
+    if (err) {
+      throw new Error(err.toString());
+    }
+  });
+};
+
 // POST to submit a new post
 const postNewPost = [
+  upload.single("image"),
+
+  (err: Error, req: CustomRequest, res: Response, next: NextFunction) => {
+    if (err) {
+      res.status(413).json({ message: "File too large (10MB max)" });
+    } else {
+      next();
+    }
+  },
+
   body("title")
     .trim()
     .escape()
@@ -214,6 +260,10 @@ const postNewPost = [
   (req: CustomRequest, res: Response, next: NextFunction) => {
     const validationErrors = validationResult(req);
     if (!validationErrors.isEmpty()) {
+      // need to delete any uploaded file since we won't be using it
+      if (req.file) {
+        deleteTempImage(req.file.path);
+      }
       res.status(400).json({
         message: "Invalid input - check each field for errors",
         errors: validationErrors.mapped(),
@@ -225,6 +275,10 @@ const postNewPost = [
 
   asyncHandler(async (req: CustomRequest, res) => {
     const { group, user } = req;
+    if ((!group || !user) && req.file) {
+      // need to delete any uploaded file since we won't be using it
+      deleteTempImage(req.file.path);
+    }
     if (!group) {
       throw new Error("Error getting group info from database");
     } else if (!user) {
@@ -244,6 +298,38 @@ const postNewPost = [
         };
         const newPost = new PostModel(postInfo);
         newPost.id = newPost._id.toString();
+
+        // handle image
+        if (req.file) {
+          // set all the paths we need
+          const resizedFilename = `${newPost.id}-image.webp`;
+          const resizedPath = path.join(
+            __dirname,
+            `../tmp/posts/resized/${resizedFilename}`,
+          );
+          const storageDestination = `posts/${resizedFilename}`;
+
+          // resize & convert to webp format (old browsers be damned)
+          await sharp(req.file.path)
+            .webp({ quality: 90 })
+            .resize(1200, 1200, { fit: "inside", withoutEnlargement: true })
+            .toFile(resizedPath);
+
+          // upload to firebase
+          await storageBucket.upload(resizedPath, {
+            destination: storageDestination,
+          });
+
+          // delete both temp images
+          deleteTempImage(req.file.path);
+          deleteTempImage(resizedPath);
+
+          // get the download URL to add to the new post's "image" field
+          const fileRef = storageBucket.file(storageDestination);
+          const downloadURL = await getDownloadURL(fileRef);
+          newPost.image = downloadURL;
+        }
+
         await newPost.save();
         res.status(201).json({
           message: `New post added to ${group.name} group`,
