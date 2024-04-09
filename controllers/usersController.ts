@@ -228,6 +228,94 @@ const logoutUser = asyncHandler(async (req, res) => {
   });
 });
 
+// PATCH to follow another user
+const patchFollowUser = asyncHandler(
+  async (req: CustomRequest, res: Response) => {
+    const { user, userDocument } = req;
+    if (!user) {
+      throw new Error("Error deserializing authenticated user's info");
+    } else if (!userDocument) {
+      throw new Error("Error getting user info from database");
+    } else {
+      try {
+        const authUser = user as UserInterface;
+        if (authUser.id === userDocument.id) {
+          res.status(400).json({ message: "User cannot follow themselves" });
+        } else if (
+          userDocument.followers.includes(authUser.id) ||
+          authUser.following.includes(userDocument.id)
+        ) {
+          res.status(400).json({
+            message: `User already following ${userDocument.username}`,
+          });
+        } else {
+          const authUserDocument = await UserModel.findById(authUser.id);
+          if (!authUserDocument) {
+            throw new Error("Error getting authenticated user from database");
+          } else {
+            userDocument.followers.push(authUser.id);
+            authUserDocument.following.push(userDocument.id);
+            await userDocument.save();
+            await authUserDocument.save();
+            res.status(200).json({
+              message: `User is now following ${userDocument.username}`,
+            });
+          }
+        }
+      } catch (err) {
+        res.status(200).json({ message: "Error following user", error: err });
+      }
+    }
+  },
+);
+
+// PATCH to unfollow another user
+const patchUnfollowUser = asyncHandler(
+  async (req: CustomRequest, res: Response) => {
+    const { user, userDocument } = req;
+    if (!user) {
+      throw new Error("Error deserializing authenticated user's info");
+    } else if (!userDocument) {
+      throw new Error("Error getting user info from database");
+    } else {
+      const authUser = user as UserInterface;
+      const authUserDocument = await UserModel.findById(authUser.id);
+      if (!authUserDocument) {
+        throw new Error("Error getting authenticated user from database");
+      } else if (
+        !userDocument.followers.includes(authUser.id) ||
+        !authUser.following.includes(userDocument.id)
+      ) {
+        res
+          .status(400)
+          .json({ message: `User is not following ${userDocument.username}` });
+      } else {
+        try {
+          const followingIndex = authUserDocument.following.indexOf(
+            userDocument.id,
+          );
+          const followerIndex = userDocument.followers.indexOf(
+            authUserDocument.id,
+          );
+          authUserDocument.following.splice(followingIndex, 1);
+          userDocument.followers.splice(followerIndex, 1);
+          await authUserDocument.save();
+          await userDocument.save();
+          res
+            .status(200)
+            .json({
+              message: `User is no longer following ${userDocument.username}`,
+            });
+        } catch (err) {
+          res
+            .status(500)
+            .json({ message: "Error unfollowing user", error: err });
+        }
+      }
+    }
+  },
+);
+
 // for handling profile avatar uploads
 const avatarStorage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -367,6 +455,8 @@ const usersController = {
   getUserInfo,
   loginUser,
   logoutUser,
+  patchFollowUser,
+  patchUnfollowUser,
   patchUpdateProfile,
 };
 

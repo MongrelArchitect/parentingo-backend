@@ -1,5 +1,4 @@
 import bcrypt from "bcrypt";
-import fs from "fs";
 import path from "path";
 import supertest from "supertest";
 import app from "../../app";
@@ -387,5 +386,153 @@ describe("PATCH /users/current", () => {
     expect(user.name).toBe("New Name");
     expect(user.bio).toBe("This is my bio info");
     expect(user.avatar).toBeTruthy();
+  });
+});
+
+// usersController.patchFollowUser
+describe("PATCH /users/:userId/follow", () => {
+  it("handles unauthenticated user", async () => {
+    const user = await UserModel.findOne({ username: "praxman" });
+    if (!user) {
+      throw new Error("Error finding test user");
+    }
+    await supertest(app)
+      .patch(`/users/${user.id}/follow`)
+      .expect(401, { message: "User authentication required" });
+  });
+
+  it("handles invalid user id", (done) => {
+    supertest(app)
+      .patch("/users/badid123/follow")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, { message: "Invalid user id" }, done);
+  });
+
+  it("handles valid but nonexistant user id", (done) => {
+    supertest(app)
+      .patch("/users/601d0b50d91d180dd10d8f7a/follow")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(
+        404,
+        { message: "No user found with id 601d0b50d91d180dd10d8f7a" },
+        done,
+      );
+  });
+
+  it("prevents user from following themselves", async () => {
+    const user = await UserModel.findOne({username: validUser.username});
+    if (!user) {
+      throw new Error("Error getting test user");
+    }
+    await supertest(app)
+      .patch(`/users/${user.id}/follow`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, { message: "User cannot follow themselves" });
+  });
+
+  it("follows user", async () => {
+    const userToFollow = await UserModel.findOne({username: "praxman"});
+    if (!userToFollow) {
+      throw new Error("Error getting test user");
+    }
+    await supertest(app)
+      .patch(`/users/${userToFollow.id}/follow`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(200, { message: "User is now following praxman" });
+  });
+
+  it("has correct followers / following arrays", async () => {
+    const userToFollow = await UserModel.findOne({username: "praxman"});
+    if (!userToFollow) {
+      throw new Error("Error getting test user");
+    }
+    const authUser = await UserModel.findOne({username:validUser.username});
+    if (!authUser) {
+      throw new Error("Error getting test auth user");
+    }
+    expect(authUser.following.length).toBe(1);
+    expect(userToFollow.followers.length).toBe(1);
+    expect(authUser.following.includes(userToFollow.id)).toBeTruthy();
+    expect(userToFollow.followers.includes(authUser.id)).toBeTruthy();
+  });
+
+  it("prevents following a user multiple times", async () => {
+    const userToFollow = await UserModel.findOne({username: "praxman"});
+    if (!userToFollow) {
+      throw new Error("Error getting test user");
+    }
+    await supertest(app)
+      .patch(`/users/${userToFollow.id}/follow`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, { message: "User already following praxman" });
+  });
+});
+
+
+// usersController.patchUnfollowUser
+describe("PATCH /users/:userId/unfollow", () => {
+  it("handles unauthenticated user", async () => {
+    const user = await UserModel.findOne({ username: "praxman" });
+    if (!user) {
+      throw new Error("Error finding test user");
+    }
+    await supertest(app)
+      .patch(`/users/${user.id}/unfollow`)
+      .expect(401, { message: "User authentication required" });
+  });
+
+  it("handles invalid user id", (done) => {
+    supertest(app)
+      .patch("/users/badid123/unfollow")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, { message: "Invalid user id" }, done);
+  });
+
+  it("handles valid but nonexistant user id", (done) => {
+    supertest(app)
+      .patch("/users/601d0b50d91d180dd10d8f7a/unfollow")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(
+        404,
+        { message: "No user found with id 601d0b50d91d180dd10d8f7a" },
+        done,
+      );
+  });
+
+  it("handles user that isn't currently being followed", async () => {
+    const user = await UserModel.findOne({username: "imbanned"});
+    if (!user) {
+      throw new Error("Error finding test user");
+    }
+    await supertest(app)
+      .patch(`/users/${user.id}/unfollow`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, { message: "User is not following imbanned" });
+  });
+
+  it("unfollows user", async () => {
+    const userToUnfollow = await UserModel.findOne({username: "praxman"});
+    if (!userToUnfollow) {
+      throw new Error("Error getting test user");
+    }
+    await supertest(app)
+      .patch(`/users/${userToUnfollow.id}/unfollow`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(200, { message: "User is no longer following praxman" });
+  });
+
+  it("has correct followers / following arrays", async () => {
+    const userToUnfollow = await UserModel.findOne({username: "praxman"});
+    if (!userToUnfollow) {
+      throw new Error("Error getting test user");
+    }
+    const authUser = await UserModel.findOne({username:validUser.username});
+    if (!authUser) {
+      throw new Error("Error getting test auth user");
+    }
+    expect(authUser.following.length).toBe(0);
+    expect(userToUnfollow.followers.length).toBe(0);
+    expect(authUser.following.includes(userToUnfollow.id)).toBeFalsy();
+    expect(userToUnfollow.followers.includes(authUser.id)).toBeFalsy();
   });
 });

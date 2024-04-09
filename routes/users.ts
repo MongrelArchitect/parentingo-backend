@@ -1,5 +1,4 @@
 import { Router } from "express";
-import multer from "multer";
 
 import auth from "@middleware/auth";
 import user from "@middleware/users";
@@ -29,6 +28,24 @@ usersRoutes.patch(
   "/current",
   auth.isAuthenticated,
   usersController.patchUpdateProfile,
+);
+
+// PATCH to follow another user
+usersRoutes.patch(
+  "/:userId/follow",
+  auth.isAuthenticated,
+  user.isValidUserId,
+  user.exists,
+  usersController.patchFollowUser,
+);
+
+// PATCH to unfollow another user
+usersRoutes.patch(
+  "/:userId/unfollow",
+  auth.isAuthenticated,
+  user.isValidUserId,
+  user.exists,
+  usersController.patchUnfollowUser,
 );
 
 // POST to create a new user
