@@ -93,7 +93,21 @@ const getGroupPosts = asyncHandler(
       throw new Error("Error getting group info from database");
     } else {
       try {
-        const posts = await PostModel.find({ group: group.id });
+        // structure our query with any optional parameters
+        const { limit, skip, sort } = req.query;
+        let query = PostModel.find({ group: group.id });
+        if (sort && sort === "newest") {
+          query = query.sort("-timestamp");
+        }
+        if (skip && !isNaN(+skip)) {
+          query = query.skip(+skip);
+        }
+        if (limit && !isNaN(+limit)) {
+          query = query.limit(+limit);
+        }
+
+        const posts = await query;
+
         if (!posts.length) {
           res.status(200).json({
             message: "No posts found",

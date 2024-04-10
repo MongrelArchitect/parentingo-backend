@@ -237,6 +237,29 @@ describe("GET /groups/:groupId/posts/", () => {
       .set("Cookie", cookieControl.getCookie())
       .expect("Content-Length", "942")
       .expect(200);
+
+    // 3 posts by this point
+    const count = await PostModel.countDocuments({ group: group.id });
+    expect(count).toBe(3);
+  });
+
+  it("handles query strings", async () => {
+    const group = await GroupModel.findOne({ name: "general" });
+
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+
+    const response = await supertest(app)
+      .get(`/groups/${group.id}/posts?sort=newest&skip=2&limit=1`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(200);
+
+    // make sure we've got the right post
+    const { posts } = response.body;
+    const postId = Object.keys(posts)[0];
+    expect(Object.keys(posts).length).toBe(1);
+    expect(posts[postId].title).toBe("Praxeology Rules");
   });
 });
 
