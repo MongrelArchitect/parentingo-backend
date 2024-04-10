@@ -13,7 +13,11 @@ import { storageBucket } from "@configs/firebase";
 
 import CustomRequest from "@interfaces/CustomRequest";
 import UserInterface from "@interfaces/Users";
+
+import PostModel from "@models/post";
 import UserModel from "@models/user";
+
+import { makePostList } from "@util/posts";
 
 // POST to create a new user
 const createNewUser = [
@@ -148,6 +152,43 @@ const getCurrentUser = asyncHandler(async (req, res) => {
     res.status(200).json(user);
   }
 });
+
+// GET posts by a specific user
+const getPostsByUser = asyncHandler(
+  async (req: CustomRequest, res: Response) => {
+    const { userDocument } = req;
+    if (!userDocument) {
+      throw new Error("Error getting user's info from database");
+    } else {
+      try {
+        // structure our query with any optional parameters
+        const { limit, skip, sort } = req.query;
+        let query = PostModel.find({ author: userDocument.id });
+        if (sort && sort === "newest") {
+          query = query.sort("-timestamp");
+        }
+        if (skip && !isNaN(+skip)) {
+          query = query.skip(+skip);
+        }
+        if (limit && !isNaN(+limit)) {
+          query = query.limit(+limit);
+        }
+
+        const posts = await query;
+        res.status(200).json({
+          message: `${posts.length} post${posts.length === 1 ? "" : "s"} found`,
+          count: posts.length,
+          posts: makePostList(posts),
+        });
+      } catch (err) {
+        res.status(500).json({
+          message: "Error getting user's posts",
+          error: err,
+        });
+      }
+    }
+  },
+);
 
 // GET public info about a particular user
 const getUserInfo = asyncHandler(async (req: CustomRequest, res) => {
@@ -301,11 +342,9 @@ const patchUnfollowUser = asyncHandler(
           userDocument.followers.splice(followerIndex, 1);
           await authUserDocument.save();
           await userDocument.save();
-          res
-            .status(200)
-            .json({
-              message: `User is no longer following ${userDocument.username}`,
-            });
+          res.status(200).json({
+            message: `User is no longer following ${userDocument.username}`,
+          });
         } catch (err) {
           res
             .status(500)
@@ -452,6 +491,7 @@ const patchUpdateProfile = [
 const usersController = {
   createNewUser,
   getCurrentUser,
+  getPostsByUser,
   getUserInfo,
   loginUser,
   logoutUser,

@@ -3,7 +3,6 @@ import asyncHandler from "express-async-handler";
 import { body, matchedData, validationResult } from "express-validator";
 import { getDownloadURL } from "firebase-admin/storage";
 import fs from "fs";
-import { Document } from "mongoose";
 import multer from "multer";
 import path from "path";
 import sharp from "sharp";
@@ -17,26 +16,7 @@ import UserInterface from "@interfaces/Users";
 import CommentModel from "@models/comment";
 import PostModel from "@models/post";
 
-function makePostList(posts: Document[]): PostList {
-  // could just return the raw array, but i want it a bit cleaner...
-  const list: PostList = {};
-  posts.forEach((post) => {
-    // XXX
-    // better way to do this?
-    const postInfo = post as unknown as PostInterface;
-    list[postInfo.id] = {
-      id: postInfo.id,
-      author: postInfo.author,
-      timestamp: postInfo.timestamp,
-      text: postInfo.text,
-      title: postInfo.title,
-      group: postInfo.group,
-      image: postInfo.image,
-      likes: postInfo.likes,
-    };
-  });
-  return list;
-}
+import { makePostList } from "@util/posts";
 
 // DELETE a single post
 const deletePost = asyncHandler(async (req: CustomRequest, res: Response) => {

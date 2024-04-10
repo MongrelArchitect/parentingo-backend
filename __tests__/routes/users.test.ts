@@ -3,6 +3,7 @@ import path from "path";
 import supertest from "supertest";
 import app from "../../app";
 
+import GroupModel from "@models/group";
 import UserModel from "@models/user";
 import UserInterface from "@interfaces/Users";
 
@@ -534,5 +535,102 @@ describe("PATCH /users/:userId/unfollow", () => {
     expect(userToUnfollow.followers.length).toBe(0);
     expect(authUser.following.includes(userToUnfollow.id)).toBeFalsy();
     expect(userToUnfollow.followers.includes(authUser.id)).toBeFalsy();
+  });
+});
+
+describe("GET /users/:userId/posts", () => {
+  it("handles unauthenticated user", async () => {
+    const user = await UserModel.findOne({ username: "praxman" });
+    if (!user) {
+      throw new Error("Error finding test user");
+    }
+    await supertest(app)
+      .get(`/users/${user.id}/posts`)
+      .expect(401, { message: "User authentication required" });
+  });
+
+  it("handles invalid user id", (done) => {
+    supertest(app)
+      .get("/users/badid123/posts")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, { message: "Invalid user id" }, done);
+  });
+
+  it("handles valid but nonexistant user id", (done) => {
+    supertest(app)
+      .get("/users/601d0b50d91d180dd10d8f7a/posts")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(
+        404,
+        { message: "No user found with id 601d0b50d91d180dd10d8f7a" },
+        done,
+      );
+  });
+
+  it("gets the users posts", async () => {
+    const user = await UserModel.findOne({username:"praxman"});
+    if (!user) {
+      throw new Error('error finding test user');
+    }
+    const response = await supertest(app)
+      .get(`/users/${user.id}/posts`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(200);
+    expect(response.body.count).toBe(1);
+    expect(response.body.message).toBe("1 post found");
+  });
+
+  it("handles url query parameters", async () => {
+    // need a member (this one happens to be admin)
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "praxman",
+        password: "HumanAction123$",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+    
+    // now make a couple more posts
+    const group = await GroupModel.findOne({name:"general"});
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+
+    await supertest(app)
+      .post(`/groups/${group.id}/posts/`)
+      .set("Cookie", cookieControl.getCookie())
+      .type("form")
+      .send({
+        text: "here is another post",
+        title: "a post title",
+      })
+      .expect("Content-Type", /json/)
+      .expect(201);
+
+    await supertest(app)
+      .post(`/groups/${group.id}/posts/`)
+      .set("Cookie", cookieControl.getCookie())
+      .type("form")
+      .send({
+        text: "oh boy, another one!",
+        title: "another",
+      })
+      .expect("Content-Type", /json/)
+      .expect(201);
+
+    const user = await UserModel.findOne({username:"praxman"});
+    if (!user) {
+      throw new Error('error finding test user');
+    }
+    const response = await supertest(app)
+      .get(`/users/${user.id}/posts?sort=newest&skip=1&limit=1`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(200);
+    expect(response.body.count).toBe(1);
+    expect(response.body.message).toBe("1 post found");
   });
 });

@@ -243,7 +243,7 @@ describe("GET /groups/:groupId/posts/", () => {
     expect(count).toBe(3);
   });
 
-  it("handles query strings", async () => {
+  it("handles url query parameters", async () => {
     const group = await GroupModel.findOne({ name: "general" });
 
     if (!group) {

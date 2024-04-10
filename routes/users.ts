@@ -23,6 +23,15 @@ usersRoutes.get(
   usersController.getUserInfo,
 );
 
+// GET all posts by a specific user
+usersRoutes.get(
+  "/:userId/posts",
+  auth.isAuthenticated,
+  user.isValidUserId,
+  user.exists,
+  usersController.getPostsByUser,
+);
+
 // PATCH to update the current user's profile info
 usersRoutes.patch(
   "/current",

@@ -15,7 +15,8 @@
       "@interfaces/*": ["interfaces/*"],
       "@middleware/*": ["middleware/*"],
       "@models/*": ["models/*"],
-      "@routes/*": ["routes/*"]
+      "@routes/*": ["routes/*"],
+      "@util/*": ["util/*"]
     }
   },
   "ts-node": {
