@@ -172,7 +172,7 @@ const postNewComment = [
         const newComment = new CommentModel(commentInfo);
         newComment.id = newComment._id.toString();
         await newComment.save();
-        res.status(200).json({
+        res.status(201).json({
           message: "Comment created successfully",
           uri: `/groups/${group.id}/posts/${post.id}/comments/${newComment.id}`,
         });

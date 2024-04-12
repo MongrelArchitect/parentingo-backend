@@ -8,6 +8,15 @@ import user from "@middleware/users";
 
 const groupsRoutes = Router();
 
+// DELETE a group (including all its posts & comments)
+groupsRoutes.delete(
+  "/:groupId",
+  auth.isAuthenticated,
+  group.isValidGroupId,
+  group.checkAndAddToRequest,
+  group.checkIfGroupAdmin,
+  groupsController.deleteGroup,
+);
 
 // GET basic information about all groups
 groupsRoutes.get("/", auth.isAuthenticated, groupsController.getAllGroups);

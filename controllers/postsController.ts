@@ -10,7 +10,7 @@ import sharp from "sharp";
 import { storageBucket } from "@configs/firebase";
 
 import CustomRequest from "@interfaces/CustomRequest";
-import PostInterface, { PostList } from "@interfaces/Posts";
+import PostInterface from "@interfaces/Posts";
 import UserInterface from "@interfaces/Users";
 
 import CommentModel from "@models/comment";

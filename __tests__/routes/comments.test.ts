@@ -157,7 +157,7 @@ describe("POST /groups/:groupId/posts/:postId/comments/", () => {
         text: "comment here",
       })
       .expect("Content-Length", "148")
-      .expect(200);
+      .expect(201);
 
     const comments = await CommentModel.find();
     expect(comments.length).toBe(1);
@@ -508,7 +508,7 @@ describe("DELETE /groups/:groupId/posts/:postId/comments/:commentId", () => {
         text: "comment here",
       })
       .expect("Content-Length", "148")
-      .expect(200);
+      .expect(201);
 
     const comments = await CommentModel.find();
     expect(comments.length).toBe(1);

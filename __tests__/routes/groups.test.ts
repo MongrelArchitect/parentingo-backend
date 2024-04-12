@@ -1,7 +1,12 @@
+import path from "path";
 import supertest from "supertest";
+
 import app from "../../app";
 import cookieControl from "../config/session";
+
+import CommentModel from "@models/comment";
 import GroupModel from "@models/group";
+import PostModel from "@models/post";
 import UserModel from "@models/user";
 
 function getLongString(num: number) {
@@ -970,7 +975,6 @@ describe("PATCH /groups/:groupId/ban/:userId", () => {
   });
 
   it("prevents mod from banning other mods", async () => {
-    // XXX
     // need mod user
     const res = await supertest(app)
       .post("/users/login")
@@ -1206,5 +1210,134 @@ describe("GET /groups", () => {
       .expect("Content-Type", /json/)
       .expect("Content-Length", "574")
       .expect(200, done);
+  });
+});
+
+//groupsController.deleteGroup
+describe("DELETE /groups/:groupId", () => {
+  it("handles unauthenticated user", (done) => {
+    supertest(app)
+      .delete("/groups/123abc/")
+      .expect(401, { message: "User authentication required" }, done);
+  });
+
+  it("handles invalid group id", (done) => {
+    supertest(app)
+      .delete("/groups/badgroupid/")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, { message: "Invalid group id" }, done);
+  });
+
+  it("handles nonexistant group", async () => {
+    await supertest(app)
+      .delete("/groups/601d0b50d91d180dd10d8f7a/")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(404, {
+        message: "No group found with id 601d0b50d91d180dd10d8f7a",
+      });
+  });
+
+  it("handles non-admin making the request", async () => {
+    // need non-admin user
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "notreason",
+        password: "NoAuthority68!",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    await supertest(app)
+      .delete(`/groups/${group.id}/`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(403, { message: "Only group admin can make this request" });
+  });
+
+  it("deletes group", async () => {
+    // need admin user
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "praxman",
+        password: "HumanAction123$",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+    const group = await GroupModel.findOne({ name: "test group" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+
+    // make another post in the group
+    const imagePath = path.join(__dirname, "../files/small.jpg");
+    await supertest(app)
+      .post(`/groups/${group.id}/posts/`)
+      .set("Cookie", cookieControl.getCookie())
+      .attach("image", imagePath)
+      .field({
+        text: "this post has an image",
+        title: "image post",
+      })
+      .expect("Content-Type", /json/)
+      .expect(201);
+
+    const post = await PostModel.findOne({
+      group: group.id,
+      title: "image post",
+    });
+
+    if (!post) {
+      throw new Error("Error finding test post");
+    }
+
+    // now add a comment
+    await supertest(app)
+      .post(`/groups/${group.id}/posts/${post.id}/comments`)
+      .set("Cookie", cookieControl.getCookie())
+      .type("form")
+      .send({
+        text: "comment here",
+      })
+      .expect("Content-Type", /json/)
+      .expect(201);
+
+    // by this point, "general" group should have 2 posts, 1 comment, 1 image
+
+    // now try the delete
+    await supertest(app)
+      .delete(`/groups/${group.id}/`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(200, { message: "test group group deleted" });
+
+    // group should be gone
+    const deletedGroup = await GroupModel.findOne({ name: "test group" });
+    expect(deletedGroup).toBeFalsy();
+
+    // posts should be gone
+    const deletedPosts = await PostModel.find({ group: group.id });
+    expect(deletedPosts.length).toBe(0);
+
+    // comments should be gone
+    const deletedComment = await CommentModel.findOne({ post: post.id });
+    expect(deletedComment).toBeFalsy();
+
+    // image should be gone
+    if (!post.image) {
+      throw new Error("Error with test image");
+    }
+    const imageResponse = await fetch(post.image);
+    expect(imageResponse.status).toBe(404);
   });
 });

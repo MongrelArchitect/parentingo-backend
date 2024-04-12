@@ -800,7 +800,7 @@ describe("DELETE /groups/:groupId/posts/:postId", () => {
       .send({
         text: "here is a comment",
       })
-      .expect(200);
+      .expect(201);
     await supertest(app)
       .post(`/groups/${group.id}/posts/${post.id}/comments`)
       .set("Cookie", cookieControl.getCookie())
@@ -808,7 +808,7 @@ describe("DELETE /groups/:groupId/posts/:postId", () => {
       .send({
         text: "another comment goes here",
       })
-      .expect(200);
+      .expect(201);
     const commentCountBefore = await CommentModel.countDocuments({
       post: post.id,
     });
@@ -825,11 +825,11 @@ describe("DELETE /groups/:groupId/posts/:postId", () => {
     expect(postCount).toBe(2);
 
     // make sure the image was deleted
-    // XXX
-    if (post.image) {
-      const fetchResponse = await fetch(post.image);
-      expect(fetchResponse.status).toBe(404);
+    if (!post.image) {
+      throw new Error("Error with test post image");
     }
+    const fetchResponse = await fetch(post.image);
+    expect(fetchResponse.status).toBe(404);
 
     // make sure the post comment was also deleted
     const commentCountAfter = await CommentModel.countDocuments({

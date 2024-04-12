@@ -3,11 +3,15 @@ import asyncHandler from "express-async-handler";
 import { body, matchedData, validationResult } from "express-validator";
 import { Document } from "mongoose";
 
+import { storageBucket } from "@configs/firebase";
+
 import CustomRequest from "@interfaces/CustomRequest";
 import GroupInterface, { GroupList } from "@interfaces/Groups";
 import UserInterface from "@interfaces/Users";
 
+import CommentModel from "@models/comment";
 import GroupModel from "@models/group";
+import PostModel from "@models/post";;
 
 function makeGroupList(groups: Document[]): GroupList {
   // could just return the raw array, but i want it a bit cleaner...
@@ -62,6 +66,38 @@ const deleteFromMods = asyncHandler(
     }
   },
 );
+
+// DELETE a group and all of its posts, comments & images
+const deleteGroup = asyncHandler(async (req: CustomRequest, res: Response) => {
+  const { group } = req;
+  if (!group) {
+    throw new Error("Error getting group from database");
+  } else {
+    try {
+      // delete the group itself
+      await GroupModel.findByIdAndDelete(group.id);
+      // then find its posts
+      const groupPosts = await PostModel.find({group:group.id});
+      for (const post of groupPosts) {
+        // delete the post
+        await PostModel.findByIdAndDelete(post.id);
+        // delete its image if there is one
+        if (post.image) {
+          await storageBucket.file(`posts/${post.id}-image.webp`).delete();
+        }
+        // then find its comments
+        const postComments = await CommentModel.find({post:post.id});
+        for (const comment of postComments) {
+          // and delete each comment
+          await CommentModel.findByIdAndDelete(comment.id);
+        }
+      }
+      res.status(200).json({ message: `${group.name} group deleted` });
+    } catch (err) {
+      res.status(500).json({ message: "Error deleting group", error: err });
+    }
+  }
+});
 
 // GET basic info about all groups
 const getAllGroups = asyncHandler(async (req: CustomRequest, res: Response) => {
@@ -433,6 +469,7 @@ const postNewGroup = [
 
 const groupsController = {
   deleteFromMods,
+  deleteGroup,
   getAllGroups,
   getGroupInfo,
   getMemberGroups,
