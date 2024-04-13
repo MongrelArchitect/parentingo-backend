@@ -11,7 +11,7 @@ import UserInterface from "@interfaces/Users";
 
 import CommentModel from "@models/comment";
 import GroupModel from "@models/group";
-import PostModel from "@models/post";;
+import PostModel from "@models/post";
 
 function makeGroupList(groups: Document[]): GroupList {
   // could just return the raw array, but i want it a bit cleaner...
@@ -77,7 +77,7 @@ const deleteGroup = asyncHandler(async (req: CustomRequest, res: Response) => {
       // delete the group itself
       await GroupModel.findByIdAndDelete(group.id);
       // then find its posts
-      const groupPosts = await PostModel.find({group:group.id});
+      const groupPosts = await PostModel.find({ group: group.id });
       for (const post of groupPosts) {
         // delete the post
         await PostModel.findByIdAndDelete(post.id);
@@ -86,7 +86,7 @@ const deleteGroup = asyncHandler(async (req: CustomRequest, res: Response) => {
           await storageBucket.file(`posts/${post.id}-image.webp`).delete();
         }
         // then find its comments
-        const postComments = await CommentModel.find({post:post.id});
+        const postComments = await CommentModel.find({ post: post.id });
         for (const comment of postComments) {
           // and delete each comment
           await CommentModel.findByIdAndDelete(comment.id);
@@ -251,6 +251,48 @@ const patchBanUser = asyncHandler(async (req: CustomRequest, res: Response) => {
     }
   }
 });
+
+const patchEditDescription = [
+  body("description")
+    .trim()
+    .escape()
+    .notEmpty()
+    .withMessage("Description required")
+    .isLength({ max: 255 })
+    .withMessage("Description cannot be more than 255 characters"),
+
+  (req: CustomRequest, res: Response, next: NextFunction) => {
+    const validationErrors = validationResult(req);
+    if (!validationErrors.isEmpty()) {
+      res.status(400).json({
+        message: "Invalid input - check each field for errors",
+        errors: validationErrors.mapped(),
+      });
+    } else {
+      next();
+    }
+  },
+
+  asyncHandler(async (req: CustomRequest, res: Response) => {
+    const { group } = req;
+    if (!group) {
+      throw new Error("Error getting group info from database");
+    } else {
+      try {
+        const data = matchedData(req);
+        group.description = data.description;
+        await group.save();
+        res
+          .status(200)
+          .json({ message: `${group.name} group description updated` });
+      } catch (err) {
+        res
+          .status(500)
+          .json({ message: "Error updating group description", error: err });
+      }
+    }
+  }),
+];
 
 // PATCH for a user to remove themselves from group membership
 const patchLeaveGroup = asyncHandler(
@@ -475,6 +517,7 @@ const groupsController = {
   getMemberGroups,
   getOwnedGroups,
   patchBanUser,
+  patchEditDescription,
   patchLeaveGroup,
   patchNewMember,
   patchNewMod,

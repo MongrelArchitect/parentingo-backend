@@ -47,6 +47,16 @@ groupsRoutes.get(
 // POST to create a new group
 groupsRoutes.post("/", auth.isAuthenticated, groupsController.postNewGroup);
 
+// PATCH to change the group description
+groupsRoutes.patch(
+  "/:groupId",
+  auth.isAuthenticated,
+  group.isValidGroupId,
+  group.checkAndAddToRequest,
+  group.checkIfGroupAdmin,
+  groupsController.patchEditDescription,
+);
+
 // PATCH to add the current user to an existing group as a member
 groupsRoutes.patch(
   "/:groupId/members",

@@ -1341,3 +1341,102 @@ describe("DELETE /groups/:groupId", () => {
     expect(imageResponse.status).toBe(404);
   });
 });
+
+describe("PATCH /groups/:groupId", () => {
+  it("handles unauthenticated user", (done) => {
+    supertest(app)
+      .patch("/groups/123abc/")
+      .expect(401, { message: "User authentication required" }, done);
+  });
+
+  it("handles invalid group id", (done) => {
+    supertest(app)
+      .patch("/groups/badgroupid/")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, { message: "Invalid group id" }, done);
+  });
+
+  it("handles nonexistant group", async () => {
+    await supertest(app)
+      .patch("/groups/601d0b50d91d180dd10d8f7a/")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(404, {
+        message: "No group found with id 601d0b50d91d180dd10d8f7a",
+      });
+  });
+
+  it("handles non-admin making the request", async () => {
+    // need non-admin user
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "notreason",
+        password: "NoAuthority68!",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    await supertest(app)
+      .patch(`/groups/${group.id}/`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(403, { message: "Only group admin can make this request" });
+  });
+
+  it("updates group description", async () => {
+    // need admin user
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "praxman",
+        password: "HumanAction123$",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    await supertest(app)
+      .patch(`/groups/${group.id}/`)
+      .set("Cookie", cookieControl.getCookie())
+      .type("form")
+      .send({
+        description: "here is the new description",
+      })
+      .expect(200, { message: "general group description updated" });
+  });
+
+  it("has correct description after update", async () => {
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    expect(group.description).toBe("here is the new description");
+  });
+
+  it ("handles missing form data", async () => {
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    await supertest(app)
+      .patch(`/groups/${group.id}/`)
+      .set("Cookie", cookieControl.getCookie())
+      .type("form")
+      .send({
+        description: "",
+      })
+      .expect(400);
+  });
+});
