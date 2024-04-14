@@ -75,9 +75,9 @@ const getGroupPosts = asyncHandler(
       try {
         // structure our query with any optional parameters
         const { limit, skip, sort } = req.query;
-        let query = PostModel.find({ group: group.id });
+        let query = PostModel.find({ group: group.id }).sort("-sticky");
         if (sort && sort === "newest") {
-          query = query.sort("-timestamp");
+          query = query.sort({timestamp: -1});
         }
         if (skip && !isNaN(+skip)) {
           query = query.skip(+skip);
@@ -167,6 +167,24 @@ const patchLikePost = asyncHandler(async (req: CustomRequest, res) => {
   }
 });
 
+// PATCH to make a post "sticky"
+const patchSticky = asyncHandler(async (req: CustomRequest, res: Response) => {
+  const { post } = req;
+  if (!post) {
+    throw new Error("Error getting post from database");
+  } else if (post.sticky) {
+      res.status(400).json({ message: "Post is already sticky" });
+  } else {
+    try {
+      post.sticky = true;
+      await post.save();
+      res.status(200).json({ message: "Post is now sticky" });
+    } catch (err) {
+      res.status(500).json({ message: "Error making post sticky", error: err });
+    }
+  }
+});
+
 // PATCH to "unlike" a post
 const patchUnlikePost = asyncHandler(async (req: CustomRequest, res) => {
   const { post, user } = req;
@@ -190,6 +208,30 @@ const patchUnlikePost = asyncHandler(async (req: CustomRequest, res) => {
       }
     } catch (err) {
       res.status(500).json({ message: "Error unliking post", error: err });
+    }
+  }
+});
+
+// PATCH to "unstick" a sticky post
+const patchUnstick = asyncHandler(async (req: CustomRequest, res: Response) => {
+  const { group, post, role} = req;
+  if (!group) {
+    throw new Error("Error getting group from database");
+  } else if (!post) {
+    throw new Error("Error getting post from database");
+  } else if (!role) {
+    throw new Error("Error getting authenticated user's role");
+  } else if (!post.sticky) {
+      res.status(400).json({ message: "Only sticky posts can be unstuck" });
+  } else if (post.author === group.admin && role === "mod") {
+      res.status(403).json({ message: "Mods cannot unstick admin posts" });
+  } else {
+    try {
+      post.sticky = false;
+      await post.save();
+      res.status(200).json({ message: "Post is no longer sticky" });
+    } catch (err) {
+      res.status(500).json({ message: "Error unsticking post", error: err });
     }
   }
 });
@@ -343,7 +385,9 @@ const postsController = {
   getPostCount,
   getSinglePost,
   patchLikePost,
+  patchSticky,
   patchUnlikePost,
+  patchUnstick,
   postNewPost,
 };
 

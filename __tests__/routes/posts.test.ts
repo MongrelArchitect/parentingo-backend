@@ -994,3 +994,325 @@ describe("DELETE /groups/:groupId/posts/:postId", () => {
       });
   });
 });
+
+// postsController.patchSticky
+describe("PATCH /groups/:groupId/posts/:postId/sticky", () => {
+  it("handles unauthenticated user", (done) => {
+    supertest(app)
+      .patch("/groups/123abc/posts/badpostid/sticky")
+      .expect(401, { message: "User authentication required" }, done);
+  });
+
+  it("handles invalid group id", (done) => {
+    supertest(app)
+      .patch("/groups/badgroupid/posts/badpostid/sticky")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, { message: "Invalid group id" }, done);
+  });
+
+  it("handles nonexistant group", (done) => {
+    supertest(app)
+      .patch("/groups/601d0b50d91d180dd10d8f7a/posts/badpostid/sticky")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(
+        404,
+        {
+          message: "No group found with id 601d0b50d91d180dd10d8f7a",
+        },
+        done,
+      );
+  });
+
+  it("handles invalid post id", async () => {
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    await supertest(app)
+      .patch(`/groups/${group.id}/posts/badpostid/sticky`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, { message: "Invalid post id" });
+  });
+
+  it("handles nonexistant post ", async () => {
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    await supertest(app)
+      .patch(`/groups/${group.id}/posts/601d0b50d91d180dd10d8f7a/sticky`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(404, {
+        message: "No post found with id 601d0b50d91d180dd10d8f7a",
+      });
+  });
+
+  it("handles non-admin or non-mod making the request", async () => {
+    // need a non-admin user
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "notreason",
+        password: "NoAuthority68!",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const post = await PostModel.findOne({ group: group.id });
+    if (!post) {
+      throw new Error("Error finding test post");
+    }
+    await supertest(app)
+      .patch(`/groups/${group.id}/posts/${post.id}/sticky`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(403, {
+        message: "Only group admin or mod can make this request",
+      });
+  });
+
+  it("makes post sticky", async () => {
+    // need a admin user
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "praxman",
+        password: "HumanAction123$",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const post = await PostModel.findOne({ title: "my title" });
+    if (!post) {
+      throw new Error("Error finding test post");
+    }
+    await supertest(app)
+      .patch(`/groups/${group.id}/posts/${post.id}/sticky`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(200, {
+        message: "Post is now sticky",
+      });
+
+    const stickyPost = await PostModel.findOne({ title: "my title" });
+    if (!stickyPost) {
+      throw new Error("Error finding sticky test post");
+    }
+    expect(stickyPost.sticky).toBeTruthy();
+  });
+
+  it("handles post that's already sticky", async () => {
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const post = await PostModel.findOne({ title: "my title" });
+    if (!post) {
+      throw new Error("Error finding test post");
+    }
+    await supertest(app)
+      .patch(`/groups/${group.id}/posts/${post.id}/sticky`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, {
+        message: "Post is already sticky",
+      });
+  });
+});
+
+// postsController.patchUnstick
+describe("PATCH /groups/:groupId/posts/:postId/unstick", () => {
+  it("handles unauthenticated user", (done) => {
+    supertest(app)
+      .patch("/groups/123abc/posts/badpostid/unstick")
+      .expect(401, { message: "User authentication required" }, done);
+  });
+
+  it("handles invalid group id", (done) => {
+    supertest(app)
+      .patch("/groups/badgroupid/posts/badpostid/unstick")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, { message: "Invalid group id" }, done);
+  });
+
+  it("handles nonexistant group", (done) => {
+    supertest(app)
+      .patch("/groups/601d0b50d91d180dd10d8f7a/posts/badpostid/unstick")
+      .set("Cookie", cookieControl.getCookie())
+      .expect(
+        404,
+        {
+          message: "No group found with id 601d0b50d91d180dd10d8f7a",
+        },
+        done,
+      );
+  });
+
+  it("handles invalid post id", async () => {
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    await supertest(app)
+      .patch(`/groups/${group.id}/posts/badpostid/unstick`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, { message: "Invalid post id" });
+  });
+
+  it("handles nonexistant post ", async () => {
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    await supertest(app)
+      .patch(`/groups/${group.id}/posts/601d0b50d91d180dd10d8f7a/unstick`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(404, {
+        message: "No post found with id 601d0b50d91d180dd10d8f7a",
+      });
+  });
+
+  it("handles non-admin or non-mod making the request", async () => {
+    // need a non-admin user
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "notreason",
+        password: "NoAuthority68!",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const post = await PostModel.findOne({ title: "my title" });
+    if (!post) {
+      throw new Error("Error finding test post");
+    }
+    await supertest(app)
+      .patch(`/groups/${group.id}/posts/${post.id}/unstick`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(403, {
+        message: "Only group admin or mod can make this request",
+      });
+  });
+
+  it("handles non-sticky post", async () => {
+    // need admin user
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "praxman",
+        password: "HumanAction123$",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const post = await PostModel.findOne({
+      title: { $ne: "my title" },
+    });
+    if (!post) {
+      throw new Error("Error finding test post");
+    }
+    await supertest(app)
+      .patch(`/groups/${group.id}/posts/${post.id}/unstick`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(400, {
+        message: "Only sticky posts can be unstuck",
+      });
+  });
+
+  it("prevents mod from unsticking an admin's post", async () => {
+    // need a mod user
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "moddy",
+        password: "ImAMod123#",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const post = await PostModel.findOne({
+      title: "my title",
+    });
+    if (!post) {
+      throw new Error("Error finding test post");
+    }
+    await supertest(app)
+      .patch(`/groups/${group.id}/posts/${post.id}/unstick`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(403, {
+        message: "Mods cannot unstick admin posts",
+      });
+  });
+
+  it("unsticks post", async () => {
+    // need admin user
+    const res = await supertest(app)
+      .post("/users/login")
+      .type("form")
+      .send({
+        username: "praxman",
+        password: "HumanAction123$",
+      })
+      .expect("Content-Type", /json/)
+      .expect(200);
+    // save cookie for future tests that require this user's session
+    cookieControl.setCookie(res.headers["set-cookie"][0].split(";")[0]);
+
+    const group = await GroupModel.findOne({ name: "general" });
+    if (!group) {
+      throw new Error("Error finding test group");
+    }
+    const post = await PostModel.findOne({
+      title: "my title",
+    });
+    if (!post) {
+      throw new Error("Error finding test post");
+    }
+    await supertest(app)
+      .patch(`/groups/${group.id}/posts/${post.id}/unstick`)
+      .set("Cookie", cookieControl.getCookie())
+      .expect(200, {
+        message: "Post is no longer sticky",
+      });
+    const unstuckPost = await PostModel.findOne({
+      title: "my title",
+    });
+    if (!unstuckPost) {
+      throw new Error("Error finding test post");
+    }
+    expect(unstuckPost.sticky).toBeFalsy();
+  });
+});

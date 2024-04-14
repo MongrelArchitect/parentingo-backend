@@ -18,6 +18,7 @@ export function makePostList(posts: Document[]): PostList {
       group: postInfo.group,
       image: postInfo.image,
       likes: postInfo.likes,
+      sticky: postInfo.sticky,
     };
   });
   return list;

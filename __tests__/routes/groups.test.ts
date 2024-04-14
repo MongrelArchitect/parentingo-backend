@@ -1313,7 +1313,7 @@ describe("DELETE /groups/:groupId", () => {
       .expect("Content-Type", /json/)
       .expect(201);
 
-    // by this point, "general" group should have 2 posts, 1 comment, 1 image
+    // by this point, "test group" group should have 2 posts, 1 comment, 1 image
 
     // now try the delete
     await supertest(app)
@@ -1342,6 +1342,7 @@ describe("DELETE /groups/:groupId", () => {
   });
 });
 
+// groupsController.patchEditDescription
 describe("PATCH /groups/:groupId", () => {
   it("handles unauthenticated user", (done) => {
     supertest(app)

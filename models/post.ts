@@ -11,6 +11,7 @@ const postSchema = new Schema<PostInterface>({
   group: {type: String, required: true},
   image: String,
   likes: {type: [String], requird: true},
+  sticky: Boolean,
 });
 
 const PostModel = model<PostInterface>("Post", postSchema);

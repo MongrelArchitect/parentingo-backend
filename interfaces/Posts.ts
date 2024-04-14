@@ -7,6 +7,7 @@ export default interface PostInterface {
   group: string; // id of group
   image?: string;
   likes: string[]; // array of user ids
+  sticky?: boolean;
 }
 
 export interface PostList {

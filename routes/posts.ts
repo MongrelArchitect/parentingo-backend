@@ -59,6 +59,18 @@ postsRoutes.patch(
   postsController.patchLikePost,
 );
 
+// PATCH to make a post "sticky"
+postsRoutes.patch(
+  "/:postId/sticky",
+  auth.isAuthenticated,
+  group.isValidGroupId,
+  group.checkAndAddToRequest,
+  post.isValidPostId,
+  post.checkAndAddToRequest,
+  group.checkAllowedAndSetRole,
+  postsController.patchSticky,
+);
+
 // PATCH to "unlike" a post
 postsRoutes.patch(
   "/:postId/unlike",
@@ -69,6 +81,18 @@ postsRoutes.patch(
   post.isValidPostId,
   post.checkAndAddToRequest,
   postsController.patchUnlikePost,
+);
+
+// PATCH to "unstick" a sticky post
+postsRoutes.patch(
+  "/:postId/unstick",
+  auth.isAuthenticated,
+  group.isValidGroupId,
+  group.checkAndAddToRequest,
+  post.isValidPostId,
+  post.checkAndAddToRequest,
+  group.checkAllowedAndSetRole,
+  postsController.patchUnstick,
 );
 
 // DELETE for admin or mod to remove a post
