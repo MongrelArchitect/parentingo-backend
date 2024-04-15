@@ -74,8 +74,11 @@ const getGroupPosts = asyncHandler(
     } else {
       try {
         // structure our query with any optional parameters
-        const { limit, skip, sort } = req.query;
-        let query = PostModel.find({ group: group.id }).sort("-sticky");
+        const { limit, nosticky, skip, sort } = req.query;
+        let query = PostModel.find({ group: group.id });
+        if (!nosticky) {
+          query = query.sort({sticky: -1});
+        }
         if (sort && sort === "newest") {
           query = query.sort({timestamp: -1});
         }
