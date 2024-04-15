@@ -149,7 +149,41 @@ const getMemberGroups = [
     } else {
       try {
         const userInfo = user as UserInterface;
-        const groups = await GroupModel.find({ members: userInfo.id });
+        const aggregateQuery = GroupModel.aggregate([
+          {
+            $match: {members: userInfo.id}
+          },
+          {
+            $addFields: {
+              isAdmin: {
+                $cond: {
+                  if: {
+                    $eq: [userInfo.id, "$admin"]
+                  },
+                  then: 1,
+                  else: 0,
+                },
+              },
+              isMod: {
+                $cond: {
+                  if: {
+                    $in: [userInfo.id, "$mods"]
+                  },
+                  then: 1,
+                  else: 0,
+                },
+              },
+            },
+          },
+          {
+            $sort: {
+              isAdmin: -1,
+              isMod: -1,
+              name: 1,
+            },
+          },
+        ])
+        const groups = await aggregateQuery.exec()
         if (!groups.length) {
           res
             .status(200)
