@@ -3,28 +3,25 @@ import mongoose from "mongoose";
 
 // setup environemnt variables
 dotenvConfig();
-const NODE_ENV = process.env.NODE_ENV;
 const MONGO = process.env.MONGO;
 const MONGO_USER = process.env.MONGO_USER;
 const MONGO_PASS = process.env.MONGO_PASS;
 
-const options: {user?: string, pass?: string} = {};
-
-if (NODE_ENV === "production" && MONGO_USER && MONGO_PASS) {
-  options.user = MONGO_USER;
-  options.pass = MONGO_PASS;
-}
 
 // setup mongoose
 mongoose.set("strictQuery", true);
+
 export default async function connectMongoDB() {
   try {
-    if (MONGO) {
-      await mongoose.connect(MONGO, options);
+    if (MONGO && MONGO_USER && MONGO_PASS) {
+      const username = encodeURIComponent(MONGO_USER);
+      const password = encodeURIComponent(MONGO_PASS);
+      const mongoURL =`mongodb://${username}:${password}@${MONGO}`
+      await mongoose.connect(mongoURL);
       console.log("Connected to MongoDB");
     } else {
       throw new Error(
-        "No mongoDB connection string - check environment variables",
+        "Missing MongoDB configs for mongoose - check environment variables",
       );
     }
   } catch (err) {
