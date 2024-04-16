@@ -40,11 +40,12 @@
     "supertest": "^6.3.4",
     "ts-jest": "^29.1.2",
     "ts-node": "^10.9.2",
+    "tsc-alias": "^1.8.8",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.3.3"
   },
   "scripts": {
-    "build": "yarn tsc -p tsconfig.build.json",
+    "build": "yarn tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
     "start": "node dist/bin/server.js",
     "dev": "nodemon bin/server.ts",
     "test": "yarn jest --watch --noStackTrace --detectOpenHandles"
